@@ -1,18 +1,18 @@
 #![feature(seek_stream_len)]
 
 use clap::{AppSettings, Clap};
-use winit::event::{Event, WindowEvent};
+use winit::event::{Event, WindowEvent, ElementState};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
 
-use crate::game_context::{GameContext, GameState};
-use crate::gameloop::{DemoState, game_loop};
+use crate::game_context::{GameContext, GameState, DemoState};
 use crate::rendering::init_rendering;
 use crate::rendering::patch::Patch;
 use crate::rendering::renderer::Renderer;
 use crate::system::System;
 use crate::wad::{By, LumpStore, WadHeader};
 use crate::events::EventSystem;
+use crate::events::Event::{KeyDown, KeyUp};
 
 mod system;
 mod wad;
@@ -25,6 +25,9 @@ mod game_context;
 mod drawer;
 mod menu;
 mod events;
+mod level_component;
+mod page_component;
+mod options;
 
 fn main() {
     env_logger::init();
@@ -43,7 +46,7 @@ fn main() {
     renderer.set_palette(lumps.get_lump(By::Name("PLAYPAL")));
 
     let mut game_context= GameContext::new();
-    let mut demo_state = DemoState::new();
+
 
     let system = System::new();
 
@@ -64,7 +67,7 @@ fn main() {
                     }
                 }
                 Event::MainEventsCleared => {
-                    game_loop(&mut events, &mut renderer, &system, &lumps, &mut game_context, &mut demo_state);
+                    game_context.game_loop(&mut events, &mut renderer, &system, &lumps);
                     window.request_redraw();
                 }
                 Event::WindowEvent {
@@ -78,7 +81,23 @@ fn main() {
                         }
                         WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
                             renderer.resize(**new_inner_size);
-                        }
+                        },
+                        WindowEvent::KeyboardInput { input, .. } => {
+                            match input.state
+                            {
+                                ElementState::Pressed =>
+                                    events.post_event(KeyDown {
+                                        scancode: input.scancode,
+                                        virtual_keycode: input.virtual_keycode
+                                    }),
+                                ElementState::Released =>
+                                    events.post_event(KeyUp {
+                                        scancode: input.scancode,
+                                        virtual_keycode: input.virtual_keycode
+                                    }),
+                            }
+                            println!("scancode: {:?}", input)
+                        },
                         _ => {}
                     }
                 }
