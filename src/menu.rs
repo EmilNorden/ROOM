@@ -39,6 +39,7 @@ impl MenuComponent {
         menus.push(Self::create_main_menu());
         menus.push(Self::create_episodes_menu());
         menus.push(Self::create_options_menu());
+        menus.push(Self::create_new_game_menu());
 
         MenuComponent {
             is_active: false,
@@ -103,6 +104,23 @@ impl MenuComponent {
         }
     }
 
+    fn create_new_game_menu() -> Menu {
+        Menu {
+            x: 48,
+            y: 63,
+            last_on: 0,
+            draw_routine: Self::draw_new_game_menu,
+            previous_menu_index: Some(0),
+            menu_items: vec![
+                MenuItem::new(1, "M_JKILL", Some(Self::choose_skill), 'i'),
+                MenuItem::new(1, "M_ROUGH", Some(Self::choose_skill), 'h'),
+                MenuItem::new(1, "M_HURT", Some(Self::choose_skill), 'h'),
+                MenuItem::new(1, "M_ULTRA", Some(Self::choose_skill), 'u'),
+                MenuItem::new(1, "M_NMARE", Some(Self::choose_skill), 'n'),
+            ]
+        }
+    }
+
     pub fn tick(&mut self) {
         self.skull_animation_counter -= 1;
         if self.skull_animation_counter <= 0 {
@@ -145,7 +163,10 @@ impl MenuComponent {
         );
     }
 
-    fn new_game(menu_component: &mut MenuComponent, choice: i16) {}
+    fn new_game(menu_component: &mut MenuComponent, choice: i16) {
+        menu_component.current_menu_index = 3;
+        menu_component.item_on = menu_component.current_menu().last_on;
+    }
 
     fn options(menu_component: &mut MenuComponent, choice: i16) {
         menu_component.current_menu_index = 2;
@@ -174,9 +195,16 @@ impl MenuComponent {
 
     fn sound(menu_component: &mut MenuComponent, choice: i16) {}
 
+    fn choose_skill(menu_component: &mut MenuComponent, choice: i16) {}
+
 
     fn draw_main_menu(menu_component: &MenuComponent, renderer: &mut dyn Renderer, lumps: &LumpStore) {
         renderer.draw_patch(94, 2, 0, &lumps.get_lump(By::Name("M_DOOM")).into());
+    }
+
+    fn draw_new_game_menu(menu_component: &MenuComponent, renderer: &mut dyn Renderer, lumps: &LumpStore) {
+        renderer.draw_patch(96, 14, 0, &lumps.get_lump(By::Name("M_NEWG")).into());
+        renderer.draw_patch(54, 38, 0, &lumps.get_lump(By::Name("M_SKILL")).into());
     }
 
     fn draw_options_menu(menu_component: &MenuComponent, renderer: &mut dyn Renderer, lumps: &LumpStore) {
@@ -248,6 +276,8 @@ impl MenuComponent {
 
     fn hide(&mut self) {
         self.is_active = false;
+        self.current_menu_index = 0;
+        self.item_on = self.current_menu().last_on;
     }
 
     pub fn show(&mut self) {
