@@ -96,7 +96,6 @@ fn main() {
                                         virtual_keycode: input.virtual_keycode
                                     }),
                             }
-                            println!("scancode: {:?}", input)
                         },
                         _ => {}
                     }

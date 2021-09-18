@@ -57,7 +57,9 @@ impl MenuComponent {
             x: 97,
             y: 64,
             last_on: 0,
-            draw_routine: Self::draw_main_menu,
+            draw_routine: |component: &MenuComponent, renderer: &mut dyn Renderer, lumps: &LumpStore| {
+                renderer.draw_patch(94, 2, 0, &lumps.get_lump(By::Name("M_DOOM")).into());
+            },
             previous_menu_index: None,
             menu_items: vec![
                 MenuItem::new(1, "M_NGAME", Some(Self::new_game), 'n'),
@@ -76,10 +78,32 @@ impl MenuComponent {
             x: 48,
             y: 63,
             last_on: 0,
-            draw_routine: Self::draw_main_menu,
+            draw_routine: |component: &MenuComponent, renderer: &mut dyn Renderer, lumps: &LumpStore| {
+                renderer.draw_patch(54, 38, 0, &lumps.get_lump(By::Name("M_EPISOD")).into());
+            },
             previous_menu_index: Some(0),
             menu_items: vec![
                 MenuItem::new(1, "M_EPI1", Some(Self::episode), 'k')
+            ],
+        }
+    }
+
+    fn create_new_game_menu() -> Menu {
+        Menu {
+            x: 48,
+            y: 63,
+            last_on: 0,
+            draw_routine: |component: &MenuComponent, renderer: &mut dyn Renderer, lumps: &LumpStore| {
+                renderer.draw_patch(96, 14, 0, &lumps.get_lump(By::Name("M_NEWG")).into());
+                renderer.draw_patch(54, 38, 0, &lumps.get_lump(By::Name("M_SKILL")).into());
+            },
+            previous_menu_index: Some(0),
+            menu_items: vec![
+                MenuItem::new(1, "M_JKILL", Some(Self::choose_skill), 'i'),
+                MenuItem::new(1, "M_ROUGH", Some(Self::choose_skill), 'h'),
+                MenuItem::new(1, "M_HURT", Some(Self::choose_skill), 'h'),
+                MenuItem::new(1, "M_ULTRA", Some(Self::choose_skill), 'u'),
+                MenuItem::new(1, "M_NMARE", Some(Self::choose_skill), 'n'),
             ],
         }
     }
@@ -89,7 +113,37 @@ impl MenuComponent {
             x: 60,
             y: 37,
             last_on: 0,
-            draw_routine: Self::draw_options_menu,
+            draw_routine: |component: &MenuComponent, renderer: &mut dyn Renderer, lumps: &LumpStore| {
+                const MESSAGES_LINE_INDEX: i32 = 1;
+                const DETAIL_LINE_INDEX: i32 = 2;
+                const MOUSE_SENS_LINE_INDEX: i32 = 6;
+                const SCREEN_SIZE_LINE_INDEX: i32 = 4;
+                renderer.draw_patch(108, 15, 0, &lumps.get_lump(By::Name("M_OPTTTL")).into());
+
+                let detail_text = match component.options.detail {
+                    DetailLevel::Low => "M_GDLOW",
+                    DetailLevel::High => "M_GDHIGH"
+                };
+
+                renderer.draw_patch(175 + 60, 37 + LINE_HEIGHT * DETAIL_LINE_INDEX, 0,
+                                    &lumps.get_lump(By::Name(detail_text)).into());
+
+                let messages_text = match component.options.show_messages {
+                    true => "M_MSGON",
+                    false => "M_MSGOFF"
+                };
+
+                renderer.draw_patch(120 + 60, 37 + LINE_HEIGHT * MESSAGES_LINE_INDEX, 0,
+                                    &lumps.get_lump(By::Name(messages_text)).into());
+
+                Self::draw_slider(component, renderer, lumps,
+                                  60, 37 + LINE_HEIGHT * MOUSE_SENS_LINE_INDEX,
+                                  10, component.options.mouse_sensitivity);
+
+                Self::draw_slider(component, renderer, lumps,
+                                  60, 37 + LINE_HEIGHT * SCREEN_SIZE_LINE_INDEX,
+                                  9, component.options.screen_size);
+            },
             previous_menu_index: Some(0),
             menu_items: vec![
                 MenuItem::new(1, "M_ENDGAM", Some(Self::episode), 'e'),
@@ -101,23 +155,6 @@ impl MenuComponent {
                 MenuItem::new(-1, "", None, ' '),
                 MenuItem::new(1, "M_SVOL", Some(Self::sound), 's'),
             ],
-        }
-    }
-
-    fn create_new_game_menu() -> Menu {
-        Menu {
-            x: 48,
-            y: 63,
-            last_on: 0,
-            draw_routine: Self::draw_new_game_menu,
-            previous_menu_index: Some(0),
-            menu_items: vec![
-                MenuItem::new(1, "M_JKILL", Some(Self::choose_skill), 'i'),
-                MenuItem::new(1, "M_ROUGH", Some(Self::choose_skill), 'h'),
-                MenuItem::new(1, "M_HURT", Some(Self::choose_skill), 'h'),
-                MenuItem::new(1, "M_ULTRA", Some(Self::choose_skill), 'u'),
-                MenuItem::new(1, "M_NMARE", Some(Self::choose_skill), 'n'),
-            ]
         }
     }
 
@@ -195,48 +232,8 @@ impl MenuComponent {
 
     fn sound(menu_component: &mut MenuComponent, choice: i16) {}
 
-    fn choose_skill(menu_component: &mut MenuComponent, choice: i16) {}
-
-
-    fn draw_main_menu(menu_component: &MenuComponent, renderer: &mut dyn Renderer, lumps: &LumpStore) {
-        renderer.draw_patch(94, 2, 0, &lumps.get_lump(By::Name("M_DOOM")).into());
-    }
-
-    fn draw_new_game_menu(menu_component: &MenuComponent, renderer: &mut dyn Renderer, lumps: &LumpStore) {
-        renderer.draw_patch(96, 14, 0, &lumps.get_lump(By::Name("M_NEWG")).into());
-        renderer.draw_patch(54, 38, 0, &lumps.get_lump(By::Name("M_SKILL")).into());
-    }
-
-    fn draw_options_menu(menu_component: &MenuComponent, renderer: &mut dyn Renderer, lumps: &LumpStore) {
-        const MESSAGES_LINE_INDEX: i32 = 1;
-        const DETAIL_LINE_INDEX: i32 = 2;
-        const MOUSE_SENS_LINE_INDEX: i32 = 6;
-        const SCREEN_SIZE_LINE_INDEX: i32 = 4;
-        renderer.draw_patch(108, 15, 0, &lumps.get_lump(By::Name("M_OPTTTL")).into());
-
-        let detail_text = match menu_component.options.detail {
-            DetailLevel::Low => "M_GDLOW",
-            DetailLevel::High => "M_GDHIGH"
-        };
-
-        renderer.draw_patch(175 + 60, 37 + LINE_HEIGHT * DETAIL_LINE_INDEX, 0,
-                            &lumps.get_lump(By::Name(detail_text)).into());
-
-        let messages_text = match menu_component.options.show_messages {
-            true => "M_MSGON",
-            false => "M_MSGOFF"
-        };
-
-        renderer.draw_patch(120 + 60, 37 + LINE_HEIGHT * MESSAGES_LINE_INDEX, 0,
-                            &lumps.get_lump(By::Name(messages_text)).into());
-
-        Self::draw_slider(menu_component, renderer, lumps,
-                          60, 37 + LINE_HEIGHT * MOUSE_SENS_LINE_INDEX,
-                          10, menu_component.options.mouse_sensitivity);
-
-        Self::draw_slider(menu_component, renderer, lumps,
-                          60, 37 + LINE_HEIGHT * SCREEN_SIZE_LINE_INDEX,
-                          9, menu_component.options.screen_size);
+    fn choose_skill(menu_component: &mut MenuComponent, choice: i16) {
+        // TODO: Should display a confirmation message if choosing nightmare skill
     }
 
     fn draw_slider(menu_component: &MenuComponent, renderer: &mut dyn Renderer, lumps: &LumpStore,
@@ -251,7 +248,7 @@ impl MenuComponent {
             );
         }
 
-        renderer.draw_patch(x + (width+1) * 8, y, 0,
+        renderer.draw_patch(x + (width + 1) * 8, y, 0,
                             &lumps.get_lump(By::Name("M_THERMR")).into(),
         );
 
