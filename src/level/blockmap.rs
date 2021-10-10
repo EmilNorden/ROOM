@@ -12,8 +12,7 @@ pub struct Blockmap<'a> {
     // blocklinks: Vec<>, TODO SKIP FOR NOW
 }
 
-pub fn load(lumps: &LumpStore, map_lump: LumpNumber) -> Blockmap {
-    let data = lumps.get_lump(By::Number(map_lump.offset(10)));
+pub fn load(data: &[u8]) -> Blockmap {
     let mut cursor = Cursor::new(data);
     // TODO Blocklinks? See P_LoadBlockMap
     Blockmap {

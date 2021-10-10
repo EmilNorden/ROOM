@@ -3,9 +3,11 @@ use crate::wad::{LumpStore, By, LumpNumber};
 use std::io::Seek;
 use std::mem::size_of;
 use serde::Deserialize;
+use crate::level::parse_entity_vector;
+use crate::level::linedefs::LineDef;
 
 #[derive(Deserialize)]
-struct SectorRaw {
+struct RawSector {
     floor_height: i16,
     ceiling_height: i16,
     floor_pic: [u8; 8],
@@ -16,36 +18,30 @@ struct SectorRaw {
 }
 
 pub struct Sector {
-    floor_height: DoomRealNum,
-    ceiling_height: DoomRealNum,
-    floor_pic: usize,
-    ceiling_pic: usize,
-    light_level: i16,
-    special: i16,
-    tag: i16,
+    pub(crate) floor_height: DoomRealNum,
+    pub(crate) ceiling_height: DoomRealNum,
+    pub(crate) floor_pic: usize,
+    pub(crate) ceiling_pic: usize,
+    pub(crate) light_level: i16,
+    pub(crate) special: i16,
+    pub(crate) tag: i16,
+    pub(crate) line_count: u32,
+    pub(crate) lines: Vec<LineDef>,
 
     // TODO: Unfinished, look at definition in original code
 }
 
-pub fn load(lumps: &LumpStore, map_lump: LumpNumber) -> Vec<Sector> {
-    let mut data = lumps.get_lump_cursor(By::Number(map_lump.offset(8)));
+pub fn load(data: &[u8]) -> Vec<Sector> {
+    parse_entity_vector(data, |raw_sector: RawSector| Sector {
+        floor_height: real(raw_sector.floor_height),
+        ceiling_height: real(raw_sector.ceiling_height),
 
-    let sector_count = data.stream_len().unwrap() as usize / size_of::<SectorRaw>();
-    let mut sectors = Vec::new();
-
-    for _ in 0..sector_count {
-        let raw_sector: SectorRaw = bincode::deserialize_from(&mut data).unwrap();
-        sectors.push(Sector {
-            floor_height: real(raw_sector.floor_height),
-            ceiling_height: real(raw_sector.ceiling_height),
-
-            floor_pic: 0,
-            ceiling_pic: 0,
-            light_level: 0,
-            special: 0,
-            tag: 0
-        });
-    }
-
-    sectors
+        floor_pic: 0,
+        ceiling_pic: 0,
+        light_level: 0,
+        special: 0,
+        tag: 0,
+        line_count: 0, // This will be updated later in the level loading functions
+        lines: Vec::new(),
+    })
 }

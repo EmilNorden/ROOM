@@ -2,12 +2,13 @@ use crate::menu::menu_item::MenuItem;
 use crate::rendering::renderer::Renderer;
 use std::thread::current;
 use crate::wad::{LumpStore, By};
-use crate::events::{EventConsumer, Event};
+use crate::events::{EventConsumer, Event, ConsumeResult};
 use winit::event::{ScanCode, VirtualKeyCode};
 use crate::options::{Options, DetailLevel};
+use crate::events::ConsumeResult::NotHandled;
+use crate::game_context::{StateChange, Skill};
 
 mod menu_item;
-mod definitions;
 
 const LINE_HEIGHT: i32 = 16;
 const SKULL_X_OFFSET: i32 = -32;
@@ -158,6 +159,7 @@ impl MenuComponent {
         }
     }
 
+    // M_Ticker
     pub fn tick(&mut self) {
         self.skull_animation_counter -= 1;
         if self.skull_animation_counter <= 0 {
@@ -200,40 +202,66 @@ impl MenuComponent {
         );
     }
 
-    fn new_game(menu_component: &mut MenuComponent, choice: i16) {
+    fn new_game(menu_component: &mut MenuComponent, choice: i16) -> ConsumeResult {
         menu_component.current_menu_index = 3;
         menu_component.item_on = menu_component.current_menu().last_on;
+        ConsumeResult::NotHandled
     }
 
-    fn options(menu_component: &mut MenuComponent, choice: i16) {
+    fn options(menu_component: &mut MenuComponent, choice: i16) -> ConsumeResult {
         menu_component.current_menu_index = 2;
         menu_component.item_on = menu_component.current_menu().last_on;
+        ConsumeResult::NotHandled
     }
 
-    fn load_game(menu_component: &mut MenuComponent, choice: i16) {}
+    fn load_game(menu_component: &mut MenuComponent, choice: i16) -> ConsumeResult {
+        ConsumeResult::NotHandled
+    }
 
-    fn save_game(menu_component: &mut MenuComponent, choice: i16) {}
+    fn save_game(menu_component: &mut MenuComponent, choice: i16) -> ConsumeResult {
+        ConsumeResult::NotHandled
+    }
 
-    fn read_this(menu_component: &mut MenuComponent, choice: i16) {}
+    fn read_this(menu_component: &mut MenuComponent, choice: i16) -> ConsumeResult {
+        ConsumeResult::NotHandled
+    }
 
-    fn quit(menu_component: &mut MenuComponent, choice: i16) {}
+    fn quit(menu_component: &mut MenuComponent, choice: i16) -> ConsumeResult {
+        ConsumeResult::NotHandled
+    }
 
-    fn episode(menu_component: &mut MenuComponent, choice: i16) {}
+    fn episode(menu_component: &mut MenuComponent, choice: i16) -> ConsumeResult {
+        ConsumeResult::NotHandled
+    }
 
-    fn end_game(menu_component: &mut MenuComponent, choice: i16) {}
+    fn end_game(menu_component: &mut MenuComponent, choice: i16) -> ConsumeResult {
+        ConsumeResult::NotHandled
+    }
 
-    fn change_messages(menu_component: &mut MenuComponent, choice: i16) {}
+    fn change_messages(menu_component: &mut MenuComponent, choice: i16) -> ConsumeResult {
+        ConsumeResult::NotHandled
+    }
 
-    fn change_detail(menu_component: &mut MenuComponent, choice: i16) {}
+    fn change_detail(menu_component: &mut MenuComponent, choice: i16) -> ConsumeResult {
+        ConsumeResult::NotHandled
+    }
 
-    fn size_display(menu_component: &mut MenuComponent, choice: i16) {}
+    fn size_display(menu_component: &mut MenuComponent, choice: i16) -> ConsumeResult {
+        ConsumeResult::NotHandled
+    }
 
-    fn change_sensitivity(menu_component: &mut MenuComponent, choice: i16) {}
+    fn change_sensitivity(menu_component: &mut MenuComponent, choice: i16) -> ConsumeResult {
+        ConsumeResult::NotHandled
+    }
 
-    fn sound(menu_component: &mut MenuComponent, choice: i16) {}
+    fn sound(menu_component: &mut MenuComponent, choice: i16) -> ConsumeResult {
+        ConsumeResult::NotHandled
+    }
 
-    fn choose_skill(menu_component: &mut MenuComponent, choice: i16) {
+    fn choose_skill(menu_component: &mut MenuComponent, choice: i16) -> ConsumeResult {
+
         // TODO: Should display a confirmation message if choosing nightmare skill
+        ConsumeResult::Handled(Some(StateChange::NewGame(Skill::Baby)))
     }
 
     fn draw_slider(menu_component: &MenuComponent, renderer: &mut dyn Renderer, lumps: &LumpStore,
@@ -271,7 +299,7 @@ impl MenuComponent {
         &self.current_menu().menu_items[self.item_on]
     }
 
-    fn hide(&mut self) {
+    pub(crate) fn hide(&mut self) {
         self.is_active = false;
         self.current_menu_index = 0;
         self.item_on = self.current_menu().last_on;
@@ -284,9 +312,9 @@ impl MenuComponent {
 
 impl EventConsumer for MenuComponent {
     // M_Responder
-    fn consume(&mut self, event: &Event) -> bool {
+    fn consume(&mut self, event: &Event) -> ConsumeResult {
         if !self.is_active {
-            return false;
+            return ConsumeResult::NotHandled;
         }
 
         // TODO: Im skipping support for navigating menu with joystick/mouse. Atleast for now
@@ -294,7 +322,7 @@ impl EventConsumer for MenuComponent {
             Event::KeyDown { virtual_keycode: Some(key), .. } => {
                 key
             }
-            _ => return false,
+            _ => return NotHandled,
         };
 
         // Keys usable within menu
@@ -309,6 +337,7 @@ impl EventConsumer for MenuComponent {
                         break;
                     }
                 }
+                ConsumeResult::Handled(None)
             }
             VirtualKeyCode::Up => {
                 loop {
@@ -324,6 +353,7 @@ impl EventConsumer for MenuComponent {
                         break;
                     }
                 }
+                ConsumeResult::Handled(None)
             }
             VirtualKeyCode::Return => {
                 if self.current_menu_item().status() != 0 {
@@ -331,21 +361,25 @@ impl EventConsumer for MenuComponent {
 
                     if let Some(routine) = self.current_menu_item().routine() {
                         if self.current_menu_item().status() == 2 {
-                            routine(self, 1); // right arrow
                             // TODO Play sound!
+                            return routine(self, 1); // right arrow
                         } else {
-                            routine(self, self.item_on as i16);
                             // TODO Play sound!
+                            return routine(self, self.item_on as i16);
                         }
                     }
+
+                    ConsumeResult::Handled(None)
+                } else {
+                    ConsumeResult::Handled(None)
                 }
             }
             VirtualKeyCode::Escape => {
                 self.current_menu_mut().last_on = self.item_on;
                 self.hide();
+                ConsumeResult::Handled(None)
             }
-            _ => return false,
+            _ => NotHandled
         }
-        true
     }
 }

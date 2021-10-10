@@ -1,30 +1,21 @@
-use crate::events::{EventConsumer, Event};
-use crate::game_context::{DemoState, GameMode};
+use crate::events::{EventConsumer, Event, ConsumeResult};
+use crate::game_context::{DemoState, GameMode, StateChange};
 use crate::rendering::renderer::Renderer;
 use crate::wad::{LumpStore, By};
 
 pub struct PageComponent {
     demo_state: DemoState,
-    open_menu_requested: bool,
 }
 
 impl PageComponent {
     pub fn new() -> Self {
         Self {
             demo_state: DemoState::new(),
-            open_menu_requested: false,
         }
     }
 
     pub fn demo_state(&self) -> &DemoState { &self.demo_state }
     pub fn demo_state_mut(&mut self) -> &mut DemoState { &mut self.demo_state }
-
-    pub fn open_menu_requested(&mut self) -> bool {
-        let result = self.open_menu_requested;
-        self.open_menu_requested = false;
-
-        result
-    }
 
     pub fn draw(&self, renderer: &mut dyn Renderer, lumps: &LumpStore) {
         if self.demo_state.page_name().is_none() {
@@ -75,15 +66,10 @@ impl PageComponent {
 }
 
 impl EventConsumer for PageComponent {
-    fn consume(&mut self, event: &Event) -> bool {
+    fn consume(&mut self, event: &Event) -> ConsumeResult {
         match event {
-            Event::KeyDown { .. } => {
-                self.open_menu_requested = true;
-                // Dont consume the event
-            },
-            _ => {}
+            Event::KeyDown { .. } => ConsumeResult::Handled(Some(StateChange::ShowMenu)),
+            _ => ConsumeResult::NotHandled
         }
-
-        false
     }
 }

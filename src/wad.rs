@@ -30,10 +30,20 @@ impl<T: AsRef<[u8]>> ReadWadString for Cursor<T> {
     fn read_wad_string(&mut self) -> std::io::Result<String> {
         let mut buffer = [0u8; 8];
         self.read_exact(&mut buffer)?;
-        Ok(String::from_utf8(buffer.into()).unwrap()
+        Ok(String::from_utf8(buffer.into())
+            .unwrap()
             .trim_matches(char::from(0)).to_string())
     }
 }
+
+pub fn from_wad_string(chars: [u8; 8]) -> String {
+    String::from_utf8(chars.into())
+        .unwrap()
+        .trim_matches(char::from(0))
+        .to_string()
+}
+
+
 
 #[derive(Deserialize)]
 pub struct WadHeader {

@@ -5,8 +5,8 @@ use image::GenericImageView;
 use crate::rendering::patch::Patch;
 use crate::rendering::palette::Palette;
 
-const RENDER_WIDTH: usize = 320;
-const RENDER_HEIGHT: usize = 200;
+pub(crate) const RENDER_WIDTH: usize = 320;
+pub(crate) const RENDER_HEIGHT: usize = 200;
 
 pub trait Renderer {
     fn set_palette(&mut self, palette: &[u8]);

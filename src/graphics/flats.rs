@@ -1,5 +1,7 @@
 use crate::wad::LumpStore;
 
+pub struct FlatNumber(usize);
+
 pub struct FlatData {
     first_flat: usize,
     last_flat: usize,
@@ -7,12 +9,20 @@ pub struct FlatData {
     flat_translation: Vec<i32>,
 }
 
+impl FlatData {
+    pub fn get_flat_number(&self, name: &str, lumps: &LumpStore) -> Option<FlatNumber> {
+        let lump_number: usize = lumps.get_lump_number(name)?.into();
+
+        Some(FlatNumber(lump_number - self.first_flat))
+    }
+}
+
 pub fn init_flats(lumps: &LumpStore) -> FlatData {
-    let first_flat = lumps.get_lump_number("F_START")
+    let first_flat: usize = lumps.get_lump_number("F_START")
         .unwrap()
         .into();
 
-    let last_flat = lumps.get_lump_number("F_END")
+    let last_flat: usize = lumps.get_lump_number("F_END")
         .unwrap()
         .into();
 
@@ -24,8 +34,8 @@ pub fn init_flats(lumps: &LumpStore) -> FlatData {
     }
 
     FlatData {
-        first_flat,
-        last_flat,
+        first_flat: first_flat + 1,
+        last_flat: last_flat - 1,
         num_flats,
         flat_translation
     }

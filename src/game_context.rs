@@ -1,5 +1,5 @@
 use crate::menu::MenuComponent;
-use crate::level_component::LevelComponent;
+use crate::game_component::GameComponent;
 use crate::game_context::GameState::Level;
 use crate::events::EventSystem;
 use crate::rendering::renderer::Renderer;
@@ -7,13 +7,12 @@ use crate::system::System;
 use crate::wad::{LumpStore, By};
 use crate::page_component::PageComponent;
 
-const MAX_NODES:usize = 8;
-const BACKUPTICKS:i32 = 12;
+const MAX_NODES: usize = 8;
+const BACKUPTICKS: i32 = 12;
 
-pub struct GameContext {
+pub struct GameContext<'a> {
     pub(crate) state: GameState,
     pub(crate) mode: GameMode,
-    pub(crate) action: GameAction,
     pub(crate) old_enter_tics: i32,
     pub(crate) net_tics: [i32; MAX_NODES],
     pub(crate) node_in_game: [bool; MAX_NODES],
@@ -23,16 +22,17 @@ pub struct GameContext {
     pub(crate) make_tic: i32,
 
     pub(crate) menu: MenuComponent,
-    pub(crate) level: LevelComponent,
+    pub(crate) game: GameComponent<'a>,
     pub(crate) page: PageComponent,
+
+    lumps: LumpStore,
 }
 
-impl GameContext {
-    pub fn new() -> Self {
+impl GameContext<'_> {
+    pub fn new(lumps: LumpStore) -> Self {
         Self {
             state: GameState::DemoScreen,
             mode: GameMode::Commercial, // TODO Hard coded for now
-            action: GameAction::Nothing,
             old_enter_tics: 0,
             net_tics: [0i32; MAX_NODES],
             node_in_game: [false; MAX_NODES],
@@ -41,12 +41,13 @@ impl GameContext {
             skip_tics: 0,
             make_tic: 0,
             menu: MenuComponent::new(),
-            level: LevelComponent::new(),
+            game: GameComponent::new(&lumps),
             page: PageComponent::new(),
+            lumps,
         }
     }
 
-    pub fn game_loop(&mut self, events: &mut EventSystem, renderer: &mut dyn Renderer, system: &System, lumps: &LumpStore) {
+    pub fn game_loop(&mut self, events: &mut EventSystem, renderer: &mut dyn Renderer, system: &System) {
         let map = 1;
         /*let map_lump_num = lumps.get_lump_number(&format!("map{:02}", map)).unwrap();
 
@@ -64,24 +65,25 @@ impl GameContext {
             GameState::Finale => {}
             GameState::DemoScreen => {
                 // D_PageDrawer
-                self.page.draw(renderer, lumps);
+                self.page.draw(renderer, &self.lumps);
             }
         }
 
         // TODO S_UpdateSounds(players[consoleplayer].mo);// move positional sounds
 
-        self.menu.draw(renderer, lumps);
+        self.menu.draw(renderer, &self.lumps);
 
-        events.process_events(&mut [
+        if let Some(state_change) = events.process_events(&mut [
             &mut self.menu,
             &mut self.page,
-            &mut self.level
-        ]);
-
-        if self.page.open_menu_requested() {
-            self.menu.show();
+            &mut self.game
+        ]) {
+            match state_change {
+                StateChange::NewGame(x) => self.game.new_game(x, 1, 1),
+                StateChange::ShowMenu => self.menu.show(),
+                StateChange::HideMenu => self.menu.hide(),
+            }
         }
-
     }
 
     fn try_run_tics(&mut self, system: &System) {
@@ -158,12 +160,14 @@ impl GameContext {
 
                 // TODO:
                 // M_Ticker
-                // TODO G_Ticker is required to get any gameplay on screen
+
+                self.menu.tick();
+                self.game.tick(self.game_tic, &self.lumps);
                 //game_ticker( demo_state);
                 self.game_tic += 1;
 
                 // modify command for duplicated tics
-                if i != ticdup -1 {
+                if i != ticdup - 1 {
                     // TODO Fill this in
                 }
             }
@@ -185,8 +189,7 @@ impl GameContext {
         if self.skip_tics <= newtics {
             newtics -= self.skip_tics;
             self.skip_tics = 0;
-        }
-        else {
+        } else {
             self.skip_tics -= newtics;
             newtics = 0;
         }
@@ -239,7 +242,7 @@ pub enum GameState {
 pub enum GameAction {
     Nothing,
     LoadLevel,
-    NewGame,
+    NewGame { skill: Skill, episode: i32, map: i32 },
     LoadGame,
     SaveGame,
     PlayDemo,
@@ -262,11 +265,26 @@ impl DemoState {
             advance_demo: true, // Should be false and set to true in D_StartTitle, but seems redundant
             demo_sequence: -1,
             page_name: None,
-            page_tic: 0
+            page_tic: 0,
         }
     }
 
     pub fn page_name(&self) -> Option<&String> {
         self.page_name.as_ref()
     }
+}
+
+#[derive(Copy, Clone, std::cmp::PartialEq, PartialOrd)]
+pub enum Skill {
+    Baby,
+    Easy,
+    Medium,
+    Hard,
+    Nightmare,
+}
+
+pub enum StateChange {
+    NewGame(Skill),
+    ShowMenu,
+    HideMenu,
 }

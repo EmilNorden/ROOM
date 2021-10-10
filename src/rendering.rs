@@ -1,10 +1,8 @@
-use crate::rendering::textures::{init_textures, TextureData};
-use crate::wad::LumpStore;
+use crate::graphics::textures::{init_textures, TextureData};
 use crate::types::DoomRealNum;
+use crate::wad::LumpStore;
 
-mod textures;
 mod bsp;
-mod flats;
 pub mod renderer;
 pub(crate) mod patch;
 mod palette;

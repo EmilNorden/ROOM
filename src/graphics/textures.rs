@@ -3,6 +3,7 @@ use std::io::{Cursor, Read, Seek, SeekFrom};
 use byteorder::{LittleEndian, ReadBytesExt};
 use serde::Deserialize;
 use std::mem::size_of;
+use std::convert::TryInto;
 
 #[derive(Deserialize)]
 struct MapTexturePatchRaw {
@@ -42,10 +43,56 @@ struct Texture {
     patches: Vec<TexturePatch>,
 }
 
+impl Texture {
+    pub fn name(&self) -> &str { &self.name }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct TextureNumber(usize);
+
+impl<T> From<T> for TextureNumber
+    where T: TryInto<usize> {
+    fn from(number: T) -> Self {
+        TextureNumber(number.try_into().ok().unwrap())
+    }
+}
 
 pub struct TextureData {
     patch_names: Vec<String>,
     textures: Vec<Texture>,
+}
+
+impl TextureData {
+    pub fn get_texture_number<S>(&self, name: S) -> Option<TextureNumber>
+        where S: AsRef<str> {
+        let name_ref = name.as_ref();
+        // "NoTexture" marker.
+        if name_ref.starts_with("-") {
+            return Some(TextureNumber(0));
+        }
+
+        for i in 0..self.textures.len() {
+            if self.textures[i].name() == name_ref {
+                return Some(TextureNumber(i));
+            }
+        }
+
+        None
+    }
+    /*pub fn get_texture_number(&self, name: &str) -> Option<TextureNumber> {
+        // "NoTexture" marker.
+        if name.starts_with("-") {
+            return Some(TextureNumber(0));
+        }
+
+        for i in 0..self.textures.len() {
+            if self.textures[i].name() == name {
+                return Some(TextureNumber(i));
+            }
+        }
+
+        None
+    }*/
 }
 
 fn read_texture<R: Read>(mut data: R) -> Texture {
@@ -128,6 +175,6 @@ pub fn init_textures(lumps: &LumpStore) -> TextureData {
 
     TextureData {
         patch_names,
-        textures
+        textures,
     }
 }

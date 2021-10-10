@@ -19,6 +19,8 @@ clap = "3.0.0-beta.4"
 byteorder = "1.4.3"
 fixed = "1.10.0"
 circular-queue = "0.2.6"
+num = "0.4.0"
+cordic = "0.1.5"
 
 # [features]
 # floating-point-arithmetics = []

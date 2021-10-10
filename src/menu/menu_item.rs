@@ -1,6 +1,7 @@
 use crate::menu::MenuComponent;
+use crate::events::ConsumeResult;
 
-pub type ActionCallback = fn(&mut MenuComponent, i16);
+pub type ActionCallback = fn(&mut MenuComponent, i16) -> ConsumeResult;
 
 pub struct MenuItem {
     status: i16,
