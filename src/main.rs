@@ -1,6 +1,5 @@
-#![feature(seek_stream_len)]
+// #![feature(seek_stream_len)]
 
-use clap::{AppSettings, Clap};
 use winit::event::{Event, WindowEvent, ElementState};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
@@ -15,6 +14,7 @@ use crate::events::EventSystem;
 use crate::events::Event::{KeyDown, KeyUp};
 use crate::types::real;
 use std::ops::BitAnd;
+use crate::rendering::types::{Angle, Point};
 
 mod system;
 mod wad;
@@ -36,7 +36,8 @@ mod map_object;
 fn main() {
     env_logger::init();
     let mut lumps = LumpStore::new();
-    lumps.add_file("/Users/emilnorden/doom/plutonia.wad");
+    // lumps.add_file("/Users/emilnorden/doom/plutonia.wad");
+    lumps.add_file("/home/emil/doom_wads/plutonia.wad");
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new()
         .with_title("rust-doom")
@@ -47,6 +48,16 @@ fn main() {
     let mut events = EventSystem::new();
 
     renderer.set_palette(lumps.get_lump(By::Name("PLAYPAL")));
+
+    let x1 = real(-960);
+    let y1 = real(-192);
+    let x2 = real(-864);
+    let y2 = real(-96);
+
+    let a = Point::new(x1, y1);
+    let b = Point::new(x2, y2);
+
+    let f = Angle::from_points(&a, &b);
 
 
     let mut game_context = GameContext::new(lumps);

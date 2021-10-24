@@ -1,3 +1,4 @@
+use crate::level::bounding_box::BoundingBox;
 use crate::rendering::View;
 use crate::level::Level;
 use crate::types::{real, DoomRealNum};
@@ -144,6 +145,61 @@ fn render_bsp_node(level: &Level, node_index: usize, viewx: DoomRealNum, viewy: 
 
     // Possibly divide back space.
 }
+
+// R_CheckBBox
+fn is_area_visible(bounds: &BoundingBox, viewx: DoomRealNum, viewy: DoomRealNum, view_angle: DoomRealNum) -> bool {
+    // Find the corners of the box
+    // that define the edges from current viewpoint.
+    let box_x = if viewx <= bounds.left() {
+        0
+    } else if viewx < bounds.right() {
+        1
+    }
+    else {
+        2
+    };
+
+    let box_y = if viewy >= bounds.top() {
+        0
+    }
+    else if viewy > bounds.bottom() {
+        1
+    }
+    else {
+        2
+    };
+
+    let box_position = (box_y << 2) + box_x;
+
+    if box_position == 5 {
+        return true;
+    }
+
+    const CHECK_COORD: [[usize; 4]; 11] = [
+        [3, 0, 2, 1],
+        [3, 0, 2, 0],
+        [3, 1, 2, 0],
+        [0, 0, 0, 0],
+        [2, 0, 2, 1],
+        [0, 0, 0, 0],
+        [3, 1, 3, 0],
+        [0, 0, 0, 0],
+        [2, 0, 3, 1],
+        [2, 1, 3, 1],
+        [2, 1, 3, 0],
+    ];
+
+    let x1 = bounds[CHECK_COORD[box_position][0]];
+    let y1 = bounds[CHECK_COORD[box_position][1]];
+    let x2 = bounds[CHECK_COORD[box_position][2]];
+    let y2 = bounds[CHECK_COORD[box_position][3]];
+
+    // check clip list for an open space
+
+    false
+}
+
+
 
 fn render_subsector(level: &Level, node_index: usize) {
 

@@ -6,6 +6,7 @@ mod bsp;
 pub mod renderer;
 pub(crate) mod patch;
 mod palette;
+pub mod types;
 
 pub struct View {
     width: usize,

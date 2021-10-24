@@ -130,10 +130,11 @@ pub fn init_textures(lumps: &LumpStore) -> TextureData {
     // Load the map texture definitions from textures.lmp.
     // The data is contained in one or two lumps,
     //  TEXTURE1 for shareware, plus TEXTURE2 for commercial.
-    let mut map_textures = lumps.get_lump_cursor(By::Name("TEXTURE1"));
+    let map_texture_lump = lumps.get_lump(By::Name("TEXTURE1"));
+    let mut map_textures = Cursor::new(&map_texture_lump);
 
     let numtextures1 = map_textures.read_u32::<LittleEndian>().unwrap() as usize;
-    let max_offset = map_textures.stream_len().unwrap();
+    let max_offset = map_texture_lump.len() as u64;
 
     // TODO: Add support for TEXTURE2 (check r_data.c:468)
 

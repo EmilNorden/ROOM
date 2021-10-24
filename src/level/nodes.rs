@@ -49,18 +49,18 @@ pub fn load(data: &[u8]) -> Vec<Node> {
         dx: real(raw_node.dx),
         dy: real(raw_node.dy),
         bbox: [
-            [
-                real(raw_node.bbox[0][0]),
-                real(raw_node.bbox[0][1]),
+            BoundingBox::new(
                 real(raw_node.bbox[0][2]),
                 real(raw_node.bbox[0][3]),
-            ],
-            [
-                real(raw_node.bbox[1][0]),
-                real(raw_node.bbox[1][1]),
+                real(raw_node.bbox[0][0]),
+                real(raw_node.bbox[0][1])
+            ),
+            BoundingBox::new(
                 real(raw_node.bbox[1][2]),
                 real(raw_node.bbox[1][3]),
-            ]
+                real(raw_node.bbox[1][0]),
+                real(raw_node.bbox[1][1])
+            ),
         ],
         children: [
             raw_node.children[0] as usize,

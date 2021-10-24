@@ -5,7 +5,7 @@ pub mod vertices;
 pub mod sectors;
 mod sidedefs;
 mod linedefs;
-mod bounding_box;
+pub mod bounding_box;
 mod sub_sectors;
 
 use crate::wad::{LumpStore, By};
