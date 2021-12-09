@@ -6,6 +6,7 @@ use crate::rendering::renderer::Renderer;
 use crate::system::System;
 use crate::wad::{LumpStore, By};
 use crate::page_component::PageComponent;
+use crate::rendering::{ViewConfiguration, View};
 
 const MAX_NODES: usize = 8;
 const BACKUPTICKS: i32 = 12;
@@ -20,6 +21,9 @@ pub struct GameContext<'a> {
     pub(crate) game_time: i32,
     pub(crate) skip_tics: i32,
     pub(crate) make_tic: i32,
+
+    pub(crate) view_config: ViewConfiguration,
+    pub(crate) view: View,
 
     pub(crate) menu: MenuComponent,
     pub(crate) game: GameComponent<'a>,
@@ -40,6 +44,8 @@ impl GameContext<'_> {
             game_time: 0,
             skip_tics: 0,
             make_tic: 0,
+            view_config: ViewConfiguration::new(),
+            view: View::new(),
             menu: MenuComponent::new(),
             game: GameComponent::new(&lumps),
             page: PageComponent::new(),
@@ -58,6 +64,11 @@ impl GameContext<'_> {
         self.try_run_tics(system);
 
         // Below are contents of D_Display
+
+        if self.view_config.refresh_view_needed() {
+            self.view = self.view_config.create_view();
+        }
+
         match self.state {
             GameState::ForceWipe => {}
             GameState::Level => {}

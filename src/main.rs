@@ -4,8 +4,7 @@ use winit::event::{Event, WindowEvent, ElementState};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
 
-use crate::game_context::{GameContext, GameState, DemoState};
-use crate::rendering::init_rendering;
+use crate::game_context::{GameContext};
 use crate::rendering::patch::Patch;
 use crate::rendering::renderer::Renderer;
 use crate::system::System;
@@ -15,6 +14,8 @@ use crate::events::Event::{KeyDown, KeyUp};
 use crate::types::real;
 use std::ops::BitAnd;
 use crate::rendering::types::{Angle, Point};
+use fixed::types::I16F16;
+use byteorder::ReadBytesExt;
 
 mod system;
 mod wad;
@@ -34,10 +35,11 @@ mod tables;
 mod map_object;
 
 fn main() {
+
     env_logger::init();
     let mut lumps = LumpStore::new();
-    // lumps.add_file("/Users/emilnorden/doom/plutonia.wad");
-    lumps.add_file("/home/emil/doom_wads/plutonia.wad");
+     lumps.add_file("/Users/emilnorden/doom/plutonia.wad");
+    //lumps.add_file("/home/emil/doom/PLUTONIA.WAD");
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new()
         .with_title("rust-doom")
@@ -49,32 +51,11 @@ fn main() {
 
     renderer.set_palette(lumps.get_lump(By::Name("PLAYPAL")));
 
-    let x1 = real(-960);
-    let y1 = real(-192);
-    let x2 = real(-864);
-    let y2 = real(-96);
-
-    let a = Point::new(x1, y1);
-    let b = Point::new(x2, y2);
-
-    let f = Angle::from_points(&a, &b);
-
-
     let mut game_context = GameContext::new(lumps);
 
-
+    let asd = I16F16::from_bits(1);
+    println!("{}", asd);
     let system = System::new();
-
-    let ndx = real(32);
-    let ndy = real(-64);
-
-    let dx = real(128);
-    let dy = real(32);
-
-    let r = ndy ^ ndx ^ dx ^ dy;
-
-    // let render_data = init_rendering(&lumps);
-
 
     'game_loop: loop {
         event_loop.run(move |event, _, control_flow| {

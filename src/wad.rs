@@ -5,6 +5,7 @@ use std::io::{SeekFrom, Seek, Read, Cursor};
 use std::collections::HashMap;
 use std::path::Path;
 use std::fmt::Display;
+use std::ops::Sub;
 
 #[derive(Copy, Clone, Debug)]
 pub struct LumpNumber(usize);
@@ -17,6 +18,14 @@ impl LumpNumber {
 
 impl Into<usize> for LumpNumber {
     fn into(self) -> usize { self.0 }
+}
+
+impl Sub for LumpNumber {
+    type Output = usize;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        self.0 - rhs.0
+    }
 }
 
 #[derive(Copy, Clone, Debug)]

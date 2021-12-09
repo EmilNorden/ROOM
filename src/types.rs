@@ -9,12 +9,41 @@ pub type DoomRealNum = f32;
 pub type DoomRealNum = I16F16;
 
 #[cfg(feature = "floating-point-arithmetics")]
+pub fn real_from_bits<T>(val: T) -> DoomRealNum {
+    unimplemented!()
+}
+
+#[cfg(not(feature = "floating-point-arithmetics"))]
+pub fn real_from_bits(val: i32) -> DoomRealNum { I16F16::from_bits(val) }
+
+#[cfg(feature = "floating-point-arithmetics")]
 pub fn real<T>(val: T) -> DoomRealNum {
-    panic!("not implemented!");
+    unimplemented!()
 }
 
 #[cfg(not(feature = "floating-point-arithmetics"))]
 pub fn real<T: fixed::traits::ToFixed>(val: T) -> DoomRealNum { I16F16::from_num(val) }
+
+#[cfg(feature = "floating-point-arithmetics")]
+pub fn real_to_int(num: DoomRealNum) -> i32 {
+    unimplemented!()
+}
+
+#[cfg(not(feature = "floating-point-arithmetics"))]
+pub fn real_to_int(num: DoomRealNum) -> i32 {
+    num.to_bits() >> 16
+}
+
+#[cfg(feature = "floating-point-arithmetics")]
+pub fn real_to_bits(num: DoomRealNum) -> i32 {
+    unimplemented!()
+}
+
+#[cfg(not(feature = "floating-point-arithmetics"))]
+pub fn real_to_bits(num: DoomRealNum) -> i32 {
+    num.to_bits()
+}
+
 
 #[repr(C)]
 #[derive(Deserialize)]

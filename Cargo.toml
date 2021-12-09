@@ -20,6 +20,7 @@ fixed = "1.10.0"
 circular-queue = "0.2.6"
 num = "0.4.0"
 cordic = "0.1.5"
+float-cmp = "0.9.0"
 
 # [features]
 # floating-point-arithmetics = []

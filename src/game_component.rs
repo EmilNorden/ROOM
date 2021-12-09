@@ -3,15 +3,16 @@ use crate::level::Level;
 use crate::game_context::{Skill, GameAction};
 use crate::random::{PRNG, create_random_generator};
 use crate::wad::LumpStore;
-use crate::graphics::textures::{TextureData, init_textures};
-use crate::graphics::flats::{FlatData, init_flats};
+use crate::graphics::textures::{TextureData};
+use crate::graphics::flats::{FlatData};
+use crate::graphics::GraphicsData;
+use crate::graphics::light_table::LightTable;
 use crate::map_object::{PlayerState, Player};
 
 pub const MAX_PLAYERS: usize = 4;
 
 pub struct GameComponent<'a> {
-    textures: TextureData,
-    flats: FlatData,
+    graphics: GraphicsData,
     loaded_level: Option<Level<'a>>,
     action: GameAction,
     demo_playback: bool,
@@ -27,9 +28,10 @@ pub struct GameComponent<'a> {
 
 impl GameComponent<'_> {
     pub fn new(lumps: &LumpStore) -> Self {
+        let graphics = GraphicsData::init(lumps);
+        let light = LightTable::init(graphics.color_maps());
         Self {
-            textures: init_textures(lumps),
-            flats: init_flats(lumps),
+            graphics,
             loaded_level: None,
             action: GameAction::Nothing,
 
@@ -104,7 +106,7 @@ impl GameComponent<'_> {
     viewactive = true;
          */
 
-        self.loaded_level = Some(Level::load(lumps, &self.textures, &self.flats, game_tics, episode, map));
+        self.loaded_level = Some(Level::load(lumps, &self.graphics.textures(), &self.graphics.flats(), game_tics, episode, map));
     }
 }
 

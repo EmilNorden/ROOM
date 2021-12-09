@@ -1,4 +1,5 @@
 use crate::types::DoomRealNum;
+use crate::rendering::types::Angle;
 
 pub trait MapObject {
     // Info for drawing: position
@@ -7,10 +8,7 @@ pub trait MapObject {
     fn z(&self) -> DoomRealNum;
 
     //More drawing info: to determine current sprite.
-    // TODO: This is unsigned in the original code.
-    // Since its a "BAM" (https://en.wikipedia.org/wiki/Binary_angular_measurement) it should really be a fixed_t?
-    // Im going to go with that.
-    fn angle(&self) -> DoomRealNum;
+    fn angle(&self) -> Angle;
 }
 
 #[derive(Copy, Clone)]
@@ -19,7 +17,7 @@ pub struct Player {
     x: DoomRealNum,
     y: DoomRealNum,
     z: DoomRealNum,
-    angle: DoomRealNum,
+    angle: Angle,
     extra_light: i32,
     viewz: DoomRealNum,
     fixed_color_map: i32,
@@ -32,7 +30,7 @@ impl MapObject for Player {
 
     fn z(&self) -> DoomRealNum { self.z }
 
-    fn angle(&self) -> DoomRealNum { self.angle }
+    fn angle(&self) -> Angle { self.angle }
 }
 
 impl Player {
@@ -55,7 +53,7 @@ impl Default for Player {
             x: Default::default(),
             y: Default::default(),
             z: Default::default(),
-            angle: Default::default(),
+            angle: Angle::default(),
             extra_light: 0,
             viewz: Default::default(),
             fixed_color_map: 0,
