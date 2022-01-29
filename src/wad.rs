@@ -28,9 +28,6 @@ impl Sub for LumpNumber {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
-pub struct FlatNumber(usize);
-
 pub trait ReadWadString {
     fn read_wad_string(&mut self) -> std::io::Result<String>;
 }

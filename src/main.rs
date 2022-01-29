@@ -11,11 +11,11 @@ use crate::system::System;
 use crate::wad::{By, LumpStore, WadHeader};
 use crate::events::EventSystem;
 use crate::events::Event::{KeyDown, KeyUp};
-use crate::types::real;
 use std::ops::BitAnd;
-use crate::rendering::types::{Angle, Point};
+use crate::rendering::types::{Angle, Point2D};
 use fixed::types::I16F16;
 use byteorder::ReadBytesExt;
+use fixed::prelude::ToFixed;
 
 mod system;
 mod wad;
@@ -33,9 +33,12 @@ mod random;
 mod graphics;
 mod tables;
 mod map_object;
+mod constants;
+mod number;
 
 fn main() {
-
+    let a = 123.0f32;
+    let b : I16F16 = a.to_fixed();
     env_logger::init();
     let mut lumps = LumpStore::new();
      lumps.add_file("/Users/emilnorden/doom/plutonia.wad");

@@ -1,9 +1,10 @@
-use crate::types::{DoomRealNum, real};
 use crate::wad::{LumpStore, By, LumpNumber};
 use std::mem::size_of;
 use std::io::Seek;
 use serde::Deserialize;
 use crate::level::parse_entity_vector;
+use crate::number::RealNumber;
+use crate::rendering::types::Point2D;
 
 #[derive(Deserialize)]
 struct RawVertex {
@@ -11,15 +12,6 @@ struct RawVertex {
     y: i16
 }
 
-#[derive(Clone)]
-pub struct Vertex {
-    pub(crate) x: DoomRealNum,
-    pub(crate) y: DoomRealNum
-}
-
-pub fn load(data: &[u8]) -> Vec<Vertex> {
-    parse_entity_vector(data, |raw_vertex: RawVertex| Vertex {
-        x: real(raw_vertex.x),
-        y: real(raw_vertex.y),
-    })
+pub fn load(data: &[u8]) -> Vec<Point2D> {
+    parse_entity_vector(data, |raw_vertex: RawVertex| Point2D::new(RealNumber::new(raw_vertex.x), RealNumber::new(raw_vertex.y)))
 }

@@ -1,9 +1,9 @@
 use crate::graphics::textures::{TextureData};
-use crate::types::{DoomRealNum, real};
+use crate::number::RealNumber;
 use crate::wad::LumpStore;
 use crate::rendering::renderer::{RENDER_WIDTH, RENDER_HEIGHT};
 
-mod bsp;
+pub mod bsp;
 pub mod renderer;
 pub(crate) mod patch;
 mod palette;
@@ -12,26 +12,26 @@ pub mod types;
 pub struct ViewConfiguration {
     refresh_view_needed: bool,
     blocks: usize,
-    detail: usize,
+    detail: i32,
 }
 
 pub struct View {
     width: usize,
     height: usize,
     scaled_width: usize,
-    centerx: i32,
-    centery: i32,
-    centerxfrac: DoomRealNum,
-    centeryfrac: DoomRealNum,
-    projection: DoomRealNum,
-    detail_shift: usize,
+    centerx: usize,
+    centery: usize,
+    centerxfrac: RealNumber,
+    centeryfrac: RealNumber,
+    projection: RealNumber,
+    detail_shift: i32,
 }
 
 impl ViewConfiguration {
     pub fn new() -> Self {
         Self {
             refresh_view_needed: false,
-            blocks: 0,
+            blocks: 9, // TODO: Implement something akin to M_LoadDefaults
             detail: 0,
         }
     }
@@ -48,11 +48,11 @@ impl ViewConfiguration {
         let detail_shift = self.detail;
         let view_width = scaled_view_width >> detail_shift;
 
-        let center_y = view_height / 2;
-        let center_x = view_width / 2;
-        let center_x_frac = real(center_x);
-        let center_y_frac = real(center_y);
-        let projection = center_x_frac;
+        let centery = view_height / 2;
+        let centerx = view_width / 2;
+        let centerxfrac = RealNumber::new(centerx);
+        let centeryfrac = RealNumber::new(centery);
+        let projection = centerxfrac;
 
         // TODO This sets the drawing functions depending on detail level.
         // Lets skip this for now.
@@ -65,15 +65,15 @@ impl ViewConfiguration {
 
 
         View {
-            width: 0,
-            height: 0,
-            scaled_width: 0,
-            centerx: 0,
-            centery: 0,
-            centerxfrac: Default::default(),
-            centeryfrac: Default::default(),
-            projection: Default::default(),
-            detail_shift: 0,
+            width: view_width,
+            height: view_height,
+            scaled_width: scaled_view_width,
+            centerx,
+            centery,
+            centerxfrac,
+            centeryfrac,
+            projection,
+            detail_shift: self.detail
         }
     }
 
@@ -82,7 +82,7 @@ impl ViewConfiguration {
         self.refresh_view_needed = true;
     }
 
-    pub fn set_detail(&mut self, detail: usize) {
+    pub fn set_detail(&mut self, detail: i32) {
         self.detail = detail;
         self.refresh_view_needed = true;
     }

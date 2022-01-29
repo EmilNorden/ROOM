@@ -4,6 +4,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use serde::Deserialize;
 use std::mem::size_of;
 use std::convert::TryInto;
+use crate::number::RealNumber;
 
 #[derive(Deserialize)]
 struct MapTexturePatchRaw {
@@ -48,7 +49,7 @@ impl Texture {
 }
 
 #[derive(Copy, Clone, Debug)]
-pub struct TextureNumber(usize);
+pub struct TextureNumber(pub usize);
 
 impl<T> From<T> for TextureNumber
     where T: TryInto<usize> {
@@ -57,9 +58,15 @@ impl<T> From<T> for TextureNumber
     }
 }
 
+impl TextureNumber {
+    pub fn is_zero(&self) -> bool { self.0 == 0 }
+}
+
 pub struct TextureData {
     patch_names: Vec<String>,
     textures: Vec<Texture>,
+    texture_translation: Vec<TextureNumber>,
+    texture_height: Vec<RealNumber>, // needed for texture pegging
 }
 
 impl TextureData {
@@ -78,6 +85,14 @@ impl TextureData {
         }
 
         None
+    }
+
+    pub fn get_texture_translation(&self, texture_number: TextureNumber) -> TextureNumber {
+        self.texture_translation[texture_number.0]
+    }
+
+    pub fn get_texture_height(&self, texture_number: TextureNumber) -> RealNumber {
+        self.texture_height[texture_number.0]
     }
     /*pub fn get_texture_number(&self, name: &str) -> Option<TextureNumber> {
         // "NoTexture" marker.
@@ -116,7 +131,9 @@ fn read_texture<R: Read>(mut data: R) -> Texture {
         }).collect(),
     }
 }
+
 impl TextureData {
+    // R_InitTextures
     pub fn init(lumps: &LumpStore) -> Self {
         let mut names = lumps.get_lump_cursor(By::Name("PNAMES"));
 
@@ -144,7 +161,7 @@ impl TextureData {
         let mut texturecolumnlump = Vec::new();
         let mut texturecolumnofs = Vec::new();
         let mut texturewidthmask = vec![0u32; numtextures];
-        let mut textureheight = vec![0u32; numtextures];
+        let mut texture_height = vec![RealNumber::new_from_bits(0); numtextures];
 
         let mut texture_offsets = vec![0u32; numtextures];
         map_textures.read_u32_into::<LittleEndian>(&mut texture_offsets).unwrap();
@@ -162,7 +179,6 @@ impl TextureData {
 
             texturecolumnlump.push(Vec::<i16>::with_capacity(texture.width as usize));
             texturecolumnofs.push(Vec::<u16>::with_capacity(texture.width as usize));
-            textureheight[i] = texture.height << 16;
 
             let mut j = 1u32;
             while j * 2 <= texture.width {
@@ -170,13 +186,21 @@ impl TextureData {
             }
 
             texturewidthmask[i] = j - 1;
+            texture_height[i] = RealNumber::new(texture.height);
 
             textures.push(texture);
+        }
+
+        let mut texture_translation = Vec::with_capacity(numtextures + 1);
+        for i in 0..numtextures {
+            texture_translation.push(TextureNumber(i));
         }
 
         Self {
             patch_names,
             textures,
+            texture_translation,
+            texture_height
         }
     }
 }

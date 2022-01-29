@@ -10,10 +10,10 @@ struct RawSubSector {
     first_seg_index: i16,
 }
 
-pub(crate) struct SubSector {
-    pub(crate) num_segs: usize,
-    pub(crate) first_seg_index: usize,
-    pub(crate) sector_index: usize,
+pub struct SubSector {
+    pub num_segs: usize,
+    pub first_seg_index: usize,
+    pub sector_index: usize,
 }
 
 pub(crate) fn load(data: &[u8], segs: &Vec<Seg>, side_defs: &Vec<SideDef>) -> Vec<SubSector> {

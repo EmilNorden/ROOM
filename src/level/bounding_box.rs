@@ -1,20 +1,23 @@
 use std::ops::Index;
-use crate::types::DoomRealNum;
-use crate::level::vertices::Vertex;
+use crate::number::RealNumber;
+use crate::rendering::types::Point2D;
 
 pub struct BoundingBox {
-    coordinates: [DoomRealNum; 4],
+    coordinates: [RealNumber; 4],
 }
 
 impl BoundingBox {
-    pub fn left(&self) -> DoomRealNum { self.coordinates[2] }
-    pub fn right(&self) -> DoomRealNum { self.coordinates[3] }
-    pub fn top(&self) -> DoomRealNum { self.coordinates[0] }
-    pub fn bottom(&self) -> DoomRealNum { self.coordinates[1] }
-}
+    const LEFT_INDEX: usize = 2;
+    const RIGHT_INDEX: usize = 3;
+    const TOP_INDEX: usize = 0;
+    const BOTTOM_INDEX: usize = 1;
 
-impl BoundingBox {
-    pub fn from_vertices(v1: &Vertex, v2: &Vertex) -> Self {
+    pub fn left(&self) -> RealNumber { self.coordinates[Self::LEFT_INDEX] }
+    pub fn right(&self) -> RealNumber { self.coordinates[Self::RIGHT_INDEX] }
+    pub fn top(&self) -> RealNumber { self.coordinates[Self::TOP_INDEX] }
+    pub fn bottom(&self) -> RealNumber { self.coordinates[Self::BOTTOM_INDEX] }
+
+    pub fn from_vertices(v1: &Point2D, v2: &Point2D) -> Self {
         Self {
             coordinates: [
                 v1.y.max(v2.y),
@@ -25,7 +28,7 @@ impl BoundingBox {
         }
     }
 
-    pub fn new(left: DoomRealNum, right: DoomRealNum, top: DoomRealNum, bottom: DoomRealNum) -> Self {
+    pub fn new(left: RealNumber, right: RealNumber, top: RealNumber, bottom: RealNumber) -> Self {
         Self {
             coordinates: [
                 top,
@@ -35,10 +38,37 @@ impl BoundingBox {
             ]
         }
     }
+
+    pub fn new_empty() -> Self {
+        Self::new(
+            RealNumber::new(i16::MAX),
+            RealNumber::new(i16::MIN),
+            RealNumber::new(i16::MIN),
+            RealNumber::new(i16::MAX),
+        )
+    }
+
+    pub fn expand(&mut self, vertex: &Point2D) {
+        if vertex.x < self.coordinates[Self::LEFT_INDEX] {
+            self.coordinates[Self::LEFT_INDEX] = vertex.x;
+        }
+
+        if vertex.x > self.coordinates[Self::RIGHT_INDEX] {
+            self.coordinates[Self::RIGHT_INDEX] = vertex.x;
+        }
+
+        if vertex.y < self.coordinates[Self::BOTTOM_INDEX] {
+            self.coordinates[Self::BOTTOM_INDEX] = vertex.y;
+        }
+
+        if vertex.y > self.coordinates[Self::TOP_INDEX] {
+            self.coordinates[Self::TOP_INDEX] = vertex.y;
+        }
+    }
 }
 
 impl Index<usize> for BoundingBox {
-    type Output = DoomRealNum;
+    type Output = RealNumber;
 
     fn index(&self, index: usize) -> &Self::Output {
         &self.coordinates[index]

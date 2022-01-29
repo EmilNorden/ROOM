@@ -1,8 +1,9 @@
 use serde::Deserialize;
-use crate::types::{DoomRealNum, real};
 use std::mem::size_of;
 use std::io::Cursor;
 use crate::level::parse_entity_vector;
+use crate::number::RealNumber;
+use crate::rendering::types::Angle;
 
 #[derive(Deserialize)]
 pub struct RawSeg {
@@ -18,8 +19,8 @@ pub struct RawSeg {
 pub struct Seg {
     pub(crate) vertex1_index: usize,
     pub(crate) vertex2_index: usize,
-    pub(crate) offset: DoomRealNum,
-    pub(crate) angle: u32,
+    pub(crate) offset: RealNumber,
+    pub(crate) angle: Angle,
     pub(crate) sidedef_index: usize,
     pub(crate) linedef_index: usize,
 
@@ -31,8 +32,8 @@ pub fn load(data: &[u8]) -> Vec<Seg> {
     parse_entity_vector(data, |raw_seg: RawSeg| Seg {
         vertex1_index: raw_seg.v1 as usize,
         vertex2_index: raw_seg.v2 as usize,
-        offset: real((raw_seg.offset as u32) << 16),
-        angle: (raw_seg.angle as u32) << 16,
+        offset: RealNumber::new(raw_seg.offset),
+        angle: Angle::new((raw_seg.angle as u32) << 16),
         sidedef_index: raw_seg.side as usize,
         linedef_index: raw_seg.linedef as usize,
         front_sector_index: 1,

@@ -1,4 +1,3 @@
-use crate::types::{DoomRealNum, real};
 use crate::wad::LumpStore;
 use std::mem::size_of;
 use std::io::Cursor;
@@ -7,6 +6,7 @@ use fixed::types::{U16F16, I16F16, U32F0};
 use serde::Deserialize;
 use crate::level::parse_entity_vector;
 use crate::level::bounding_box::BoundingBox;
+use crate::number::RealNumber;
 
 #[derive(Deserialize)]
 struct RawNode {
@@ -22,10 +22,10 @@ struct RawNode {
 
 pub struct Node {
     // Partition line
-    x: DoomRealNum,
-    y: DoomRealNum,
-    dx: DoomRealNum,
-    dy: DoomRealNum,
+    x: RealNumber,
+    y: RealNumber,
+    dx: RealNumber,
+    dy: RealNumber,
 
     // Bounding box for each child
     bbox: [BoundingBox; 2],
@@ -35,31 +35,31 @@ pub struct Node {
 }
 
 impl Node {
-    pub fn x(&self) -> DoomRealNum { self. x }
-    pub fn y(&self) -> DoomRealNum { self. y }
-    pub fn dx(&self) -> DoomRealNum { self.dx }
-    pub fn dy(&self) -> DoomRealNum { self.dy }
+    pub fn x(&self) -> RealNumber { self. x }
+    pub fn y(&self) -> RealNumber { self. y }
+    pub fn dx(&self) -> RealNumber { self.dx }
+    pub fn dy(&self) -> RealNumber { self.dy }
     pub fn children(&self) -> &[usize; 2] { & self.children }
 }
 
 pub fn load(data: &[u8]) -> Vec<Node> {
     parse_entity_vector(data, |raw_node: RawNode| Node {
-        x: real(raw_node.x),
-        y: real(raw_node.y),
-        dx: real(raw_node.dx),
-        dy: real(raw_node.dy),
+        x: RealNumber::new(raw_node.x),
+        y: RealNumber::new(raw_node.y),
+        dx: RealNumber::new(raw_node.dx),
+        dy: RealNumber::new(raw_node.dy),
         bbox: [
             BoundingBox::new(
-                real(raw_node.bbox[0][2]),
-                real(raw_node.bbox[0][3]),
-                real(raw_node.bbox[0][0]),
-                real(raw_node.bbox[0][1])
+                RealNumber::new(raw_node.bbox[0][2]),
+                RealNumber::new(raw_node.bbox[0][3]),
+                RealNumber::new(raw_node.bbox[0][0]),
+                RealNumber::new(raw_node.bbox[0][1])
             ),
             BoundingBox::new(
-                real(raw_node.bbox[1][2]),
-                real(raw_node.bbox[1][3]),
-                real(raw_node.bbox[1][0]),
-                real(raw_node.bbox[1][1])
+                RealNumber::new(raw_node.bbox[1][2]),
+                RealNumber::new(raw_node.bbox[1][3]),
+                RealNumber::new(raw_node.bbox[1][0]),
+                RealNumber::new(raw_node.bbox[1][1])
             ),
         ],
         children: [

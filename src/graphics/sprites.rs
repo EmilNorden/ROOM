@@ -1,11 +1,11 @@
+use crate::number::RealNumber;
 use crate::rendering::patch::Patch;
-use crate::types::{DoomRealNum, real};
 use crate::wad::{By, LumpStore};
 
 pub struct SpriteData {
-    widths: Vec<DoomRealNum>,
-    offsets: Vec<DoomRealNum>,
-    top_offsets: Vec<DoomRealNum>,
+    widths: Vec<RealNumber>,
+    offsets: Vec<RealNumber>,
+    top_offsets: Vec<RealNumber>,
 }
 
 impl SpriteData {
@@ -25,9 +25,9 @@ impl SpriteData {
             let patch: Patch = lumps.get_lump(By::Number(first_sprite_lump.offset(i))).into();
 
             // TODO: Investigate if these should be converted to fixed point or not.
-            sprite_width.push(real(patch.width()));
-            sprite_offset.push(real(patch.left_offset()));
-            sprite_top_offset.push(real(patch.top_offset()));
+            sprite_width.push(RealNumber::new(patch.width()));
+            sprite_offset.push(RealNumber::new(patch.left_offset()));
+            sprite_top_offset.push(RealNumber::new(patch.top_offset()));
         }
         
         Self {

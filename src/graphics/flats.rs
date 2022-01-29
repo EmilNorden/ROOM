@@ -1,6 +1,7 @@
 use crate::wad::LumpStore;
 
-pub struct FlatNumber(usize);
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct FlatNumber(pub usize);
 
 pub struct FlatData {
     first_flat: usize,

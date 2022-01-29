@@ -11,7 +11,7 @@ use crate::rendering::{ViewConfiguration, View};
 const MAX_NODES: usize = 8;
 const BACKUPTICKS: i32 = 12;
 
-pub struct GameContext<'a> {
+pub struct GameContext {
     pub(crate) state: GameState,
     pub(crate) mode: GameMode,
     pub(crate) old_enter_tics: i32,
@@ -26,14 +26,17 @@ pub struct GameContext<'a> {
     pub(crate) view: View,
 
     pub(crate) menu: MenuComponent,
-    pub(crate) game: GameComponent<'a>,
+    pub(crate) game: GameComponent,
     pub(crate) page: PageComponent,
 
     lumps: LumpStore,
 }
 
-impl GameContext<'_> {
+impl GameContext {
     pub fn new(lumps: LumpStore) -> Self {
+        let mut view_config = ViewConfiguration::new();
+        let view = view_config.create_view();
+        let game = GameComponent::new(&lumps, &view);
         Self {
             state: GameState::DemoScreen,
             mode: GameMode::Commercial, // TODO Hard coded for now
@@ -44,10 +47,10 @@ impl GameContext<'_> {
             game_time: 0,
             skip_tics: 0,
             make_tic: 0,
-            view_config: ViewConfiguration::new(),
-            view: View::new(),
+            view_config,
+            view,
             menu: MenuComponent::new(),
-            game: GameComponent::new(&lumps),
+            game,
             page: PageComponent::new(),
             lumps,
         }
@@ -78,6 +81,10 @@ impl GameContext<'_> {
                 // D_PageDrawer
                 self.page.draw(renderer, &self.lumps);
             }
+        }
+
+        if self.state == GameState::Level { // TODO: && !automapactive && gametic (check d_main.cpp:452)
+            self.game.render(&self.view);
         }
 
         // TODO S_UpdateSounds(players[consoleplayer].mo);// move positional sounds
@@ -173,7 +180,9 @@ impl GameContext<'_> {
                 // M_Ticker
 
                 self.menu.tick();
-                self.game.tick(self.game_tic, &self.lumps);
+                if let Some(new_state) = self.game.tick(self.game_tic, &self.lumps) {
+                    self.state = new_state;
+                }
                 //game_ticker( demo_state);
                 self.game_tic += 1;
 
@@ -241,6 +250,7 @@ pub enum GameMode {
     Indetermined,
 }
 
+#[derive(PartialEq)]
 pub enum GameState {
     ForceWipe,
     Level,

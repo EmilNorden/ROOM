@@ -1,6 +1,6 @@
 use crate::events::{Event, EventConsumer, ConsumeResult};
 use crate::level::Level;
-use crate::game_context::{Skill, GameAction};
+use crate::game_context::{Skill, GameAction, GameState};
 use crate::random::{PRNG, create_random_generator};
 use crate::wad::LumpStore;
 use crate::graphics::textures::{TextureData};
@@ -8,12 +8,14 @@ use crate::graphics::flats::{FlatData};
 use crate::graphics::GraphicsData;
 use crate::graphics::light_table::LightTable;
 use crate::map_object::{PlayerState, Player};
+use crate::rendering::bsp::BspRenderer;
+use crate::rendering::View;
 
 pub const MAX_PLAYERS: usize = 4;
 
-pub struct GameComponent<'a> {
+pub struct GameComponent {
     graphics: GraphicsData,
-    loaded_level: Option<Level<'a>>,
+    loaded_level: Option<Level>,
     action: GameAction,
     demo_playback: bool,
     net_demo: bool,
@@ -24,10 +26,11 @@ pub struct GameComponent<'a> {
     paused: bool,
     random: Box<dyn PRNG>,
     players: [Player; MAX_PLAYERS],
+    bsp_renderer: BspRenderer,
 }
 
-impl GameComponent<'_> {
-    pub fn new(lumps: &LumpStore) -> Self {
+impl GameComponent {
+    pub fn new(lumps: &LumpStore, view: &View) -> Self {
         let graphics = GraphicsData::init(lumps);
         let light = LightTable::init(graphics.color_maps());
         Self {
@@ -44,6 +47,7 @@ impl GameComponent<'_> {
             random: create_random_generator(),
             players: [Player::default(); 4],
             respawn_monsters: false,
+            bsp_renderer: BspRenderer::new(view),
         }
     }
 
@@ -52,7 +56,8 @@ impl GameComponent<'_> {
     }
 
     // G_Ticker (ish)
-    pub fn tick(&mut self, game_tics: i32, lumps: &LumpStore) {
+    pub fn tick(&mut self, game_tics: i32, lumps: &LumpStore) -> Option<GameState> {
+        let mut new_state = None;
         // TODO: Player reborn logic
 
         while self.action != GameAction::Nothing {
@@ -65,10 +70,13 @@ impl GameComponent<'_> {
                     self.respawnparm = false;
                     self.init_new(skill, game_tics, episode, map, lumps);
                     self.action = GameAction::Nothing;
+                    new_state = Some(GameState::Level);
                 }
                 _ => println!("Unhandled action in GameComponent::ticker")
             }
         }
+
+        new_state
     }
 
     fn init_new(&mut self, skill: Skill, game_tics: i32, mut episode: i32, mut map: i32, lumps: &LumpStore) {
@@ -108,9 +116,13 @@ impl GameComponent<'_> {
 
         self.loaded_level = Some(Level::load(lumps, &self.graphics.textures(), &self.graphics.flats(), game_tics, episode, map));
     }
+
+    pub fn render(&self, view: &View) {
+        self.bsp_renderer.render_player_view(&self.players[0], self.loaded_level.as_ref().unwrap(), view, &self.graphics);
+    }
 }
 
-impl EventConsumer for GameComponent<'_> {
+impl EventConsumer for GameComponent {
     // G_Responder (ish)
     fn consume(&mut self, event: &Event) -> ConsumeResult {
         if self.loaded_level.is_none() {

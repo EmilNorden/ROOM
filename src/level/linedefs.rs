@@ -1,9 +1,9 @@
-use crate::level::vertices::Vertex;
-use crate::types::{DoomRealNum, real};
 use crate::level::parse_entity_vector;
 use serde::Deserialize;
 use crate::level::bounding_box::BoundingBox;
 use crate::level::sidedefs::SideDef;
+use crate::number::RealNumber;
+use crate::rendering::types::Point2D;
 
 pub enum SlopeType {
     Horizontal,
@@ -27,12 +27,12 @@ pub struct LineDef {
      that leaves me with two options: Store indices into the vertices array, or copies of the actual vertices.
      On 64-bit machines usize is 8 bytes, the same size as a Vertex (2x4bytes), and since the
      vertex data doesn't change after the level is loaded, it should be fine to just store copies of the vertices*/
-    pub(crate) v1: Vertex,
-    pub(crate) v2: Vertex,
+    pub(crate) v1: Point2D,
+    pub(crate) v2: Point2D,
 
     // Precalculated v2 - v1 for side checking.
-    pub(crate) dx: DoomRealNum,
-    pub(crate) dy: DoomRealNum,
+    pub(crate) dx: RealNumber,
+    pub(crate) dy: RealNumber,
 
     // Animation related
     pub(crate) flags: i16,
@@ -64,6 +64,47 @@ pub struct LineDef {
 }
 
 impl LineDef {
+    // ML_BLOCKING
+    // Solid, is an obstacle.
+    pub const FLAG_BLOCKING: i16 = 1;
+
+    // ML_BLOCKMONSTERS
+    // Blocks monsters only.
+    pub const FLAG_BLOCK_MONSTERS: i16 = 2;
+
+    // ML_TWOSIDED
+    // Backside will not be present at all
+    //  if not two sided.
+    pub const FLAG_TWOSIDED: i16 = 4;
+
+    // ML_DONTPEGTOP
+    // upper texture unpegged
+    pub const FLAG_DONT_PEG_TOP: i16 = 8;
+
+    // ML_DONTPEGBOTTOM
+    // lower texture unpegged
+    pub const FLAG_DONT_PEG_BOTTOM: i16 = 16;
+
+    // ML_SECRET
+    // In AutoMap: don't map as two sided: IT'S A SECRET!
+    pub const FLAG_SECRET: i16 = 32;
+
+    // ML_SOUNDBLOCK
+    // Sound rendering: don't let sound cross two of these.
+    pub const FLAG_SOUND_BLOCK: i16 = 64;
+
+    // ML_DONTDRAW
+    // Don't draw on the automap at all.
+    pub const FLAG_DONT_DRAW_ON_AUTOMAP: i16 = 128;
+
+    // ML_MAPPED
+    // Set if already seen, thus drawn in automap.
+    pub const FLAG_MAPPED: i16 = 256;
+
+    pub fn dont_peg_top_texture(&self) -> bool { (self.flags & Self::FLAG_DONT_PEG_TOP) > 0 }
+
+    pub fn dont_peg_bottom_texture(&self) -> bool { (self.flags & Self::FLAG_DONT_PEG_BOTTOM) > 0 }
+
     pub fn is_adjacent_to_sector_index(&self, sector_index: usize, sides: &Vec<SideDef>) -> bool {
         if sides[self.front_side_index].sector_index == sector_index {
             return true;
@@ -76,7 +117,7 @@ impl LineDef {
     }
 }
 
-pub fn load(data: &[u8], vertices: &Vec<Vertex>) -> Vec<LineDef> {
+pub fn load(data: &[u8], vertices: &Vec<Point2D>) -> Vec<LineDef> {
     parse_entity_vector(data, |x: RawLineDef| {
         let v1 = &vertices[x.v1 as usize];
         let v2 = &vertices[x.v2 as usize];
@@ -88,7 +129,7 @@ pub fn load(data: &[u8], vertices: &Vec<Vertex>) -> Vec<LineDef> {
         } else if dy.is_zero() {
             SlopeType::Horizontal
         } else {
-            if dy.checked_div(dx).unwrap() > 0 {
+            if dy / dx > RealNumber::new(0) {
                 SlopeType::Positive
             } else {
                 SlopeType::Negative

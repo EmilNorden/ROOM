@@ -1,24 +1,75 @@
-use crate::types::{DoomRealNum, real};
 use fixed::traits::FromFixed;
 use fixed::types::I16F16;
 use crate::rendering::types::tables::{TAN_TO_ANGLE, get_sine_table, get_cosine_table};
 use float_cmp::approx_eq;
 use std::ops::{Sub, Add, Mul, SubAssign, Neg};
 use std::cmp::Ordering;
+use std::mem::swap;
+use num::traits::real::Real;
+use crate::constants::FRAC_BITS;
+use crate::number::RealNumber;
 
 pub mod tables;
 
-pub struct Point {
-    x: DoomRealNum,
-    y: DoomRealNum,
+#[derive(Clone)]
+pub struct Point2D {
+    pub x: RealNumber,
+    pub y: RealNumber,
 }
 
-impl Point {
-    pub fn new(x: DoomRealNum, y: DoomRealNum) -> Self {
+impl Point2D {
+    pub fn new(x: RealNumber, y: RealNumber) -> Self {
         Self { x, y }
     }
-    pub fn x(&self) -> DoomRealNum { self.x }
-    pub fn y(&self) -> DoomRealNum { self.y }
+    pub fn x(&self) -> RealNumber { self.x }
+    pub fn y(&self) -> RealNumber { self.y }
+
+    pub fn distance(&self, other: Point2D) -> RealNumber {
+        // TODO: This also needs to be rewritten for floating point
+        const SLOPE_BITS: i32 = 11;
+        const DBITS: i32 = FRAC_BITS-SLOPE_BITS;
+        let mut dx = (self.x - other.x).abs();
+        let mut dy = (self.y - other.y).abs();
+
+        if dy > dx {
+            swap(&mut dx, &mut dy);
+        }
+
+        let angle = (Angle::new(TAN_TO_ANGLE[((dy / dx) >> DBITS).to_bits() as usize]) + Angle::angle90()).fineshift();
+
+        // use as cosine
+        let dist = dx / RealNumber::new(get_sine_table()[angle.0 as usize]);
+
+        dist
+    }
+}
+
+impl From<&Point3D> for Point2D {
+    fn from(p: &Point3D) -> Self {
+        Self::new(p.x, p.y)
+    }
+}
+
+#[derive(Clone)]
+pub struct Point3D {
+    pub x: RealNumber,
+    pub y: RealNumber,
+    pub z: RealNumber,
+}
+
+impl Into<Point2D> for Point3D {
+    fn into(self) -> Point2D { // TODO: Is it worth implementing traits so Point3D can be interpreted as a Point2D?
+        Point2D::new(self.x, self.y)
+    }
+}
+
+impl Point3D {
+    pub fn new(x: RealNumber, y: RealNumber, z: RealNumber) -> Self {
+        Self { x, y, z }
+    }
+    pub fn x(&self) -> RealNumber { self.x }
+    pub fn y(&self) -> RealNumber { self.y }
+    pub fn z(&self) -> RealNumber { self.z }
 }
 
 #[derive(Copy, Clone, Default, PartialOrd, PartialEq)]
@@ -28,7 +79,7 @@ impl Sub for Angle {
     type Output = Angle;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        Self(self.0 - rhs.0)
+        Self(self.0.wrapping_sub(rhs.0))
     }
 }
 
@@ -96,7 +147,7 @@ impl Angle {
     }
 
     // R_PointToAngle, view[x|y] is parameter b
-    pub fn from_points(a: &Point, b: &Point) -> Self {
+    pub fn from_points(a: &Point2D, b: &Point2D) -> Self {
         let x = a.x - b.x;
         let y = a.y - b.y;
 
@@ -104,8 +155,8 @@ impl Angle {
             return Angle(0);
         }
 
-        let angle = if x >= 0 {
-            if y >= 0 {
+        let angle = if x >= RealNumber::new(0) {
+            if y >= RealNumber::new(0) {
                 if x > y {
                     // octant 0
                     TAN_TO_ANGLE[Angle::slope_div(y.to_bits(), x.to_bits())]
@@ -130,7 +181,7 @@ impl Angle {
             // x<0
             let x = -x;
 
-            if y >= 0 {
+            if y >= RealNumber::new(0) {
                 if x > y {
                     // octant 3
                     Angle::ANGLE_180 - 1 - TAN_TO_ANGLE[Angle::slope_div(y.to_bits(), x.to_bits())]
@@ -177,13 +228,15 @@ impl Angle {
         Self(self.0 >> Angle::ANGLE_TO_FINESHIFT)
     }
 
-    pub fn sine(&self) -> DoomRealNum {
+    pub fn sine(&self) -> RealNumber {
         // #define ANGLETOFINESHIFT	19
-        I16F16::from_bits(get_sine_table()[self.fineshift().0 as usize])
+        panic!("Fix this!");
+        // I16F16::from_bits(get_sine_table()[self.fineshift().0 as usize])
     }
 
-    pub fn cosine(&self) -> DoomRealNum {
-        I16F16::from_bits(get_cosine_table()[self.fineshift().0 as usize])
+    pub fn cosine(&self) -> RealNumber {
+        panic!("Fix this!");
+        // I16F16::from_bits(get_cosine_table()[self.fineshift().0 as usize])
     }
 }
 
@@ -193,12 +246,12 @@ mod tests {
 
     #[test]
     fn angle_from_points() {
-        let p1 = Point::new(real(-736), real(-128));
-        let p2 = Point::new(real(-864), real(-96));
+        let p1 = Point2D::new(real(-736), real(-128));
+        let p2 = Point2D::new(real(-864), real(-96));
         let angle = Angle::from_points(&p1, &p2);
         assert_eq!(angle.0, 2314942560);
 
-        let p1 = Point::new(real(-768), real(-192));
+        let p1 = Point2D::new(real(-768), real(-192));
         let angle = Angle::from_points(&p1, &p2);
         assert_eq!(angle.0, 3758096384);
     }
