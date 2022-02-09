@@ -56,7 +56,7 @@ impl RealNumber {
     }
 
     pub fn is_zero(self) -> bool {
-        self.is_zero()
+        self.bits == 0
     }
 
     pub fn is_negative(self) -> bool {

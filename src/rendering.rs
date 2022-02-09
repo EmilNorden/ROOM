@@ -1,3 +1,5 @@
+use crate::graphics::color_maps::ColorMapData;
+use crate::graphics::light_table::{DIST_MAP, LIGHT_LEVELS, MAX_LIGHT_SCALE};
 use crate::graphics::textures::{TextureData};
 use crate::number::RealNumber;
 use crate::wad::LumpStore;
@@ -25,6 +27,7 @@ pub struct View {
     centeryfrac: RealNumber,
     projection: RealNumber,
     detail_shift: i32,
+    // scale_light: [[[u8; 256]; MAX_LIGHT_SCALE]; LIGHT_LEVELS as usize],
 }
 
 impl ViewConfiguration {
@@ -36,7 +39,7 @@ impl ViewConfiguration {
         }
     }
 
-    pub fn create_view(&mut self) -> View {
+    pub fn create_view(&mut self, /*color_map_data: &ColorMapData*/) -> View {
         self.refresh_view_needed = false;
 
         let (scaled_view_width, view_height) = if self.blocks == 11 {
@@ -63,6 +66,22 @@ impl ViewConfiguration {
 
         }*/
 
+        // Calculate the light levels to use
+        // for each level / scale combination
+        /*
+        let mut scale_light = [[[0u8; 256]; MAX_LIGHT_SCALE]; LIGHT_LEVELS as usize];
+        for i in 0..LIGHT_LEVELS as usize {
+            let startmap = ((LIGHT_LEVELS - 1 - i) * 2) * ColorMapData::NUM_COLOR_MAPS / LIGHT_LEVELS;
+            for j in 0..MAX_LIGHT_SCALE {
+                let level = startmap - j * RENDER_WIDTH / (view_width << detail_shift) / DIST_MAP;
+
+                let level = level.clamp(0, ColorMapData::NUM_COLOR_MAPS - 1);
+
+                let color_map_offset = level as usize * 256;
+                scale_light[i][j].clone_from_slice(&color_map_data.color_maps()[color_map_offset..color_map_offset+256]);
+            }
+        }*/
+
 
         View {
             width: view_width,
@@ -73,7 +92,8 @@ impl ViewConfiguration {
             centerxfrac,
             centeryfrac,
             projection,
-            detail_shift: self.detail
+            detail_shift: self.detail,
+            // scale_light,
         }
     }
 
@@ -104,7 +124,8 @@ impl View {
             centerxfrac: Default::default(),
             centeryfrac: Default::default(),
             projection: Default::default(),
-            detail_shift: 0
+            detail_shift: 0,
+            // scale_light: [[[0u8; 256]; MAX_LIGHT_SCALE]; LIGHT_LEVELS as usize],
         }
     }
 

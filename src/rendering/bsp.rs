@@ -5,6 +5,7 @@ mod solid_seg;
 use crate::constants::FRAC_BITS;
 use crate::graphics::flats::FlatNumber;
 use crate::graphics::GraphicsData;
+use crate::graphics::light_table::{LIGHT_SCALE_SHIFT, LIGHT_SEG_SHIFT, MAX_LIGHT_SCALE};
 use crate::graphics::textures::{TextureData, TextureNumber};
 use crate::level::bounding_box::BoundingBox;
 use crate::rendering::View;
@@ -317,7 +318,7 @@ impl BspRenderer {
                 solid_segs,
                 draw_segs,
                 graphics_data,
-                planes
+                planes,
             ),
 
             Some(back_sector) => {
@@ -479,6 +480,7 @@ impl BspRenderer {
 
         let distangle = Angle::angle90() - offset_angle;
         let v1 = &level.vertices()[line.vertex1_index];
+        let v2 = &level.vertices()[line.vertex2_index];
         let hyp = v1.distance(Point2D::new(view_position.x, view_position.y));
         let sineval = RealNumber::new(get_sine_table()[distangle.fineshift().to_u32() as usize]);
 
@@ -644,11 +646,11 @@ impl BspRenderer {
         }
 
         // calculate rw_offset (only needed for textured lines)
-        let seg_textured = mid_texture | top_texture | bottom_texture | masked_texture;
+        let seg_textured = mid_texture > 0 || top_texture > 0 || bottom_texture > 0 || masked_texture > 0;
 
         let mut rw_offset = RealNumber::new(0);
         let mut rw_center_angle = Angle::new(0);
-        if seg_textured > 0 {
+        if seg_textured {
             let mut offset_angle = rw_normalangle - rw_angle;
 
             if offset_angle > Angle::angle180() {
@@ -669,12 +671,26 @@ impl BspRenderer {
 
             rw_offset += sidedef.texture_offset + line.offset;
             rw_center_angle = Angle::angle90() + view_angle + rw_normalangle;
-
             // calculate light table
             //  use different light tables
             //  for horizontal / vertical / diagonal
             // OPTIMIZE: get rid of LIGHTSEGSHIFT globally
-            // TODO: Implement if (!fixedcolormap) block from r_segs.cpp:574
+            // TODO: Lets assume that fixedcolormap is always 0 (or None in our case)
+            if true {
+                let mut lightnum = (front_sector.light_level >> LIGHT_SEG_SHIFT);
+                //TODO: extralight should be added to lightnum. Look at original code.
+
+                if v1.y == v2.y {
+                    lightnum -= 1;
+                }
+                else if v1.x == v2.x {
+                    lightnum += 1;
+                }
+
+                if lightnum < 0 {
+
+                }
+            }
         }
 
         // if a floor / ceiling plane is on the wrong side
@@ -726,10 +742,10 @@ impl BspRenderer {
         // NOTE This is not the original location of these find_plane calls
         let floor_plane_index = if front_sector.floor_height < view_position.z() {
             Some(find_plane_index(level,
-                            front_sector.floor_height,
-                            front_sector.floor_pic,
-                            front_sector.light_level,
-                            planes))
+                                  front_sector.floor_height,
+                                  front_sector.floor_pic,
+                                  front_sector.light_level,
+                                  planes))
         } else {
             None
         };
@@ -737,10 +753,10 @@ impl BspRenderer {
         let ceiling_plane_index = if front_sector.ceiling_height > view_position.z ||
             front_sector.ceiling_pic == level.sky_flat_number() {
             Some(find_plane_index(level,
-                            front_sector.ceiling_height,
-                            front_sector.ceiling_pic,
-                            front_sector.light_level,
-                            planes))
+                                  front_sector.ceiling_height,
+                                  front_sector.ceiling_pic,
+                                  front_sector.light_level,
+                                  planes))
         } else {
             None
         };
@@ -753,7 +769,8 @@ impl BspRenderer {
     if (markfloor)
         floorplane = R_CheckPlane(floorplane, rw_x, rw_stopx - 1);
         */
-        self.render_seg_loop(rw_x, rw_stopx, top_frac, mark_ceiling, floor_plane_index, ceiling_plane_index, planes);
+
+        self.render_seg_loop(rw_x, rw_stopx, rw_center_angle, rw_offset, rw_distance, rw_scale, top_frac, bottom_frac, mark_ceiling, mark_floor, floor_plane_index, ceiling_plane_index, planes, seg_textured);
 
         // TODO: IMPLEMENT THIS
         /*
@@ -784,39 +801,94 @@ impl BspRenderer {
         */
     }
 
+    //
+// R_RenderSegLoop
+// Draws zero, one, or two textures (and possibly a masked
+//  texture) for walls.
+// Can draw or mark the starting pixel of floor and ceiling
+//  textures.
+// CALLED: CORE LOOPING ROUTINE.
+//
     fn render_seg_loop(
         &self,
         rw_x: i32,
         rw_stopx: i32,
+        rw_center_angle: Angle,
+        rw_offset: RealNumber,
+        rw_distance: RealNumber,
+        rw_scale: RealNumber,
         top_frac: RealNumber,
+        bottom_frac: RealNumber,
         mark_ceiling: bool,
+        mark_floor: bool,
         floor_plane_index: Option<usize>,
         ceiling_plane_index: Option<usize>,
-        planes: &mut Planes) {
-        pub const HEIGHT_BITS:i32 = 12;
-        pub const HEIGHT_UNIT:i32 = (1 << HEIGHT_BITS);
+        planes: &mut Planes,
+        seg_textured: bool) {
+        pub const HEIGHT_BITS: i32 = 12;
+        pub const HEIGHT_UNIT: i32 = (1 << HEIGHT_BITS);
 
-        let mut top = RealNumber::new(0);
-        let mut bottom = RealNumber::new(0);
+        let rw_x = rw_x as usize;
+        let rw_stopx = rw_stopx as usize;
+
+        let mut top = 0i32;
+        let mut bottom = 0i32;
         for x in rw_x..rw_stopx {
-            let x = x as usize;
             // mark floor / ceiling areas
-            let mut yl = (top_frac + RealNumber::new_from_bits(HEIGHT_UNIT - 1)) >> HEIGHT_BITS;
+            let mut yl = (top_frac.to_bits() + HEIGHT_UNIT - 1) >> HEIGHT_BITS;
 
             // no space above wall?
-            yl = yl.max(RealNumber::new_from_bits((planes.ceiling_clip[x] + 1) as i32));
+            yl = yl.max(planes.ceiling_clip[x] as i32 + 1);
 
             if mark_ceiling {
-                top = RealNumber::new_from_bits((planes.ceiling_clip[x] + 1) as i32);
-                bottom = yl - RealNumber::new_from_bits(1);
+                top = planes.ceiling_clip[x] as i32 + 1;
+                bottom = yl - 1;
 
-                bottom = bottom.min(RealNumber::new_from_bits((planes.floor_clip[x] - 1) as i32));
+                bottom = bottom.min(planes.floor_clip[x] as i32 - 1);
 
                 if top <= bottom {
-                    planes.visible_planes[]
+                    let ceiling_plane_index = ceiling_plane_index.unwrap();
+                    planes.visible_planes[ceiling_plane_index].top[rw_x] = top as u8;
+                    planes.visible_planes[ceiling_plane_index].bottom[rw_x] = bottom as u8;
+                    // In the original code, ceilingclip is an array of short, which is then read from and placed into an int. This int is then written to ceilingplane->top[x] which is a byte...
+                    // Seems like they couldn't decide on a size and stick with it.
+                    // planes.visible_planes[]
                 }
             }
 
+            let mut yh = bottom_frac.to_bits() >> HEIGHT_BITS;
+
+            yh = yh.min(planes.floor_clip[rw_x as usize] as i32 - 1);
+
+            if mark_floor {
+                top = yh + 1;
+                bottom = planes.floor_clip[rw_x] as i32 - 1;
+                if top <= planes.ceiling_clip[rw_x] as i32 {
+                    top = planes.ceiling_clip[rw_x] as i32 + 1;
+                }
+                if top <= bottom {
+                    let floor_plane_index = floor_plane_index.unwrap();
+                    planes.visible_planes[floor_plane_index].top[rw_x] = top as u8;
+                    planes.visible_planes[floor_plane_index].bottom[rw_x] = bottom as u8;
+                }
+            }
+
+            // texturecolumn and lighting are independent of wall tiers
+            if seg_textured {
+                // calculate texture offset
+                let angle = (rw_center_angle + self.x_to_view_angle[rw_x]).fineshift();
+                // TODO: This whole Angle -> Fineshift -> using the angle to index into the FINE_TANGENT array looks weird as hell. Figure it out :)
+                let texture_column = rw_offset - RealNumber::new(FINE_TANGENT[angle.to_u32() as usize]) * rw_distance;
+                let texture_column = texture_column.to_int();
+
+                // calculate lighting
+                let index = rw_scale >> LIGHT_SCALE_SHIFT;
+                let mut index = index.to_bits() as usize;
+                index = index.min(MAX_LIGHT_SCALE - 1);
+
+
+
+            }
         }
     }
 

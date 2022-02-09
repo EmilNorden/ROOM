@@ -246,12 +246,12 @@ mod tests {
 
     #[test]
     fn angle_from_points() {
-        let p1 = Point2D::new(real(-736), real(-128));
-        let p2 = Point2D::new(real(-864), real(-96));
+        let p1 = Point2D::new(RealNumber::new(-736), RealNumber::new(-128));
+        let p2 = Point2D::new(RealNumber::new(-864), RealNumber::new(-96));
         let angle = Angle::from_points(&p1, &p2);
         assert_eq!(angle.0, 2314942560);
 
-        let p1 = Point2D::new(real(-768), real(-192));
+        let p1 = Point2D::new(RealNumber::new(-768), RealNumber::new(-192));
         let angle = Angle::from_points(&p1, &p2);
         assert_eq!(angle.0, 3758096384);
     }

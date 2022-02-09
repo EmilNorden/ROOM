@@ -5,7 +5,7 @@ pub struct ColorMapData {
 }
 
 impl ColorMapData {
-    pub const NUM_COLOR_MAPS: i32 = 32;
+    pub const NUM_COLOR_MAPS: usize = 32;
 
     pub fn init(lumps: &LumpStore) -> Self {
         let lump = lumps.get_lump(By::Name("COLORMAP"));

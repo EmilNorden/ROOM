@@ -41,8 +41,8 @@ fn main() {
     let b : I16F16 = a.to_fixed();
     env_logger::init();
     let mut lumps = LumpStore::new();
-     lumps.add_file("/Users/emilnorden/doom/plutonia.wad");
-    //lumps.add_file("/home/emil/doom/PLUTONIA.WAD");
+    //lumps.add_file("/Users/emilnorden/doom/plutonia.wad");
+    lumps.add_file("/home/emil/doom_wads/plutonia.wad");
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new()
         .with_title("rust-doom")
