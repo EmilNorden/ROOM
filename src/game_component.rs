@@ -32,7 +32,6 @@ pub struct GameComponent {
 impl GameComponent {
     pub fn new(lumps: &LumpStore, view: &View) -> Self {
         let graphics = GraphicsData::init(lumps);
-        let light = LightTable::init(graphics.color_maps());
         Self {
             graphics,
             loaded_level: None,

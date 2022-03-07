@@ -523,7 +523,7 @@ impl BspRenderer {
         let mut world_top = front_sector.ceiling_height - view_position.z;
         let mut world_bottom = front_sector.floor_height - view_position.z;
 
-        let mid_texture = 0;
+        let mut mid_texture = TextureNumber(0);
         let top_texture = 0;
         let bottom_texture = 0;
         let masked_texture = 0;
@@ -535,6 +535,8 @@ impl BspRenderer {
 
         let mut world_high = RealNumber::new(0);
         let mut world_low = RealNumber::new(0);
+
+        let mut rw_mid_texture_mid = RealNumber::new(0);
 
         if let Some(back_sector) = optional_back_sector {
             // two sided line
@@ -643,10 +645,23 @@ impl BspRenderer {
 
                 // current_seg.masked_texture_col
             }
+        } else {
+            // one sided line
+            mid_texture = graphics_data.textures().get_texture_translation(sidedef.mid_texture);
+            // a single sided line is terminal, so it must mark ends
+            mark_floor = true;
+            mark_ceiling = true;
+
+            if linedef.dont_peg_bottom_texture() {
+                let vtop = front_sector.floor_height +
+                    graphics_data.textures().get_texture_height(sidedef.mid_texture);
+
+                rw_mid_texture_mid = vtop - view_position.z();
+            }
         }
 
         // calculate rw_offset (only needed for textured lines)
-        let seg_textured = mid_texture > 0 || top_texture > 0 || bottom_texture > 0 || masked_texture > 0;
+        let seg_textured = mid_texture.is_zero() || top_texture > 0 || bottom_texture > 0 || masked_texture > 0;
 
         let mut rw_offset = RealNumber::new(0);
         let mut rw_center_angle = Angle::new(0);
@@ -682,14 +697,11 @@ impl BspRenderer {
 
                 if v1.y == v2.y {
                     lightnum -= 1;
-                }
-                else if v1.x == v2.x {
+                } else if v1.x == v2.x {
                     lightnum += 1;
                 }
 
-                if lightnum < 0 {
-
-                }
+                if lightnum < 0 {}
             }
         }
 
@@ -824,7 +836,7 @@ impl BspRenderer {
         floor_plane_index: Option<usize>,
         ceiling_plane_index: Option<usize>,
         planes: &mut Planes,
-        seg_textured: bool) {
+        seg_textured: bool, ) {
         pub const HEIGHT_BITS: i32 = 12;
         pub const HEIGHT_UNIT: i32 = (1 << HEIGHT_BITS);
 
@@ -886,9 +898,10 @@ impl BspRenderer {
                 let mut index = index.to_bits() as usize;
                 index = index.min(MAX_LIGHT_SCALE - 1);
 
-
-
+                // TODO Set dc_colormap here
             }
+
+            // draw the wall tiers
         }
     }
 

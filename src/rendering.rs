@@ -10,6 +10,7 @@ pub mod renderer;
 pub(crate) mod patch;
 mod palette;
 pub mod types;
+mod color_map;
 
 pub struct ViewConfiguration {
     refresh_view_needed: bool,
