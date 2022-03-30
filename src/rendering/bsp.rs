@@ -782,7 +782,7 @@ impl BspRenderer {
         floorplane = R_CheckPlane(floorplane, rw_x, rw_stopx - 1);
         */
 
-        self.render_seg_loop(rw_x, rw_stopx, rw_center_angle, rw_offset, rw_distance, rw_scale, top_frac, bottom_frac, mark_ceiling, mark_floor, floor_plane_index, ceiling_plane_index, planes, seg_textured);
+        self.render_seg_loop(view, rw_x, rw_stopx, rw_center_angle, rw_offset, rw_distance, rw_scale, top_frac, bottom_frac, mark_ceiling, mark_floor, floor_plane_index, ceiling_plane_index, planes, seg_textured, mid_texture);
 
         // TODO: IMPLEMENT THIS
         /*
@@ -823,6 +823,7 @@ impl BspRenderer {
 //
     fn render_seg_loop(
         &self,
+        view: &View,
         rw_x: i32,
         rw_stopx: i32,
         rw_center_angle: Angle,
@@ -836,7 +837,8 @@ impl BspRenderer {
         floor_plane_index: Option<usize>,
         ceiling_plane_index: Option<usize>,
         planes: &mut Planes,
-        seg_textured: bool, ) {
+        seg_textured: bool,
+        mid_texture: TextureNumber) {
         pub const HEIGHT_BITS: i32 = 12;
         pub const HEIGHT_UNIT: i32 = (1 << HEIGHT_BITS);
 
@@ -902,6 +904,15 @@ impl BspRenderer {
             }
 
             // draw the wall tiers
+            if mid_texture.is_zero() {
+               // two sided line
+            }
+            else {
+                // single sided line
+                // TODO: Call colfunc() here
+                planes.ceiling_clip[rw_x] = view.height as i16;
+                planes.ceiling_clip[rw_x] = -1;
+            }
         }
     }
 

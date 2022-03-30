@@ -525,6 +525,23 @@ impl Renderer for WGPURenderer {
         }
     }
 
+    // R_DrawColumn
+    fn draw_column(&mut self, yl: i32, yh: i32, x: i32) {
+        let count = yh - yl;
+
+        // Zero length, column does not exceed a pixel
+        if count < 0 {
+            return;
+        }
+
+        if x >= RENDER_WIDTH as i32 || yl < 0 || yh >= RENDER_HEIGHT as i32 {
+            panic!("R_DrawColumn: {} to {} at {}", yl, yh, x);
+        }
+
+        // Framebuffer destination address
+
+    }
+
     fn present(&mut self) {
         self.frame_texture.update_bytes(
             &self.queue,
