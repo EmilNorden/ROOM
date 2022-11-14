@@ -25,7 +25,7 @@ impl Vertex {
     fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
         wgpu::VertexBufferLayout {
             array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
-            step_mode: wgpu::InputStepMode::Vertex,
+            step_mode: wgpu::VertexStepMode::Vertex,
             attributes: &[
                 wgpu::VertexAttribute {
                     offset: 0,
@@ -55,8 +55,7 @@ pub struct WGPURenderer {
     surface: wgpu::Surface,
     device: wgpu::Device,
     queue: wgpu::Queue,
-    sc_desc: wgpu::SwapChainDescriptor,
-    swap_chain: wgpu::SwapChain,
+    config: wgpu::SurfaceConfiguration,
     size: winit::dpi::PhysicalSize<u32>,
     render_pipeline: RenderPipeline,
     vertex_buffer: wgpu::Buffer,
@@ -77,12 +76,13 @@ impl WGPURenderer {
         ];
         let size = window.inner_size();
 
-        let instance = wgpu::Instance::new(wgpu::BackendBit::PRIMARY);
+        let instance = wgpu::Instance::new(wgpu::Backends::all());
         let surface = unsafe { instance.create_surface(window) };
         let adapter = instance.request_adapter(
             &wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::default(),
                 compatible_surface: Some(&surface),
+                force_fallback_adapter: false,
             }
         ).await.unwrap();
 
@@ -95,22 +95,20 @@ impl WGPURenderer {
             None,
         ).await.unwrap();
 
-        let sc_desc = wgpu::SwapChainDescriptor {
-            usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
-            format: TextureFormat::Bgra8Unorm,
-            // The below looks more robust, but it made the image too bright
-            // format: adapter.get_swap_chain_preferred_format(&surface).unwrap(),
+        let config = wgpu::SurfaceConfiguration {
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            format: TextureFormat::Bgra8Unorm, //surface.get_supported_formats(&adapter)[0], //
             width: size.width,
             height: size.height,
             present_mode: wgpu::PresentMode::Fifo,
+            alpha_mode: wgpu::CompositeAlphaMode::Auto,
         };
 
-        let swap_chain = device.create_swap_chain(&surface, &sc_desc);
+        surface.configure(&device, &config);
 
         let shader = device.create_shader_module(
-            &wgpu::ShaderModuleDescriptor {
+            wgpu::ShaderModuleDescriptor {
                 label: Some("Shader"),
-                flags: wgpu::ShaderFlags::all(),
                 source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
             }
         );
@@ -119,7 +117,7 @@ impl WGPURenderer {
             &wgpu::util::BufferInitDescriptor {
                 label: Some("Vertex Buffer"),
                 contents: bytemuck::cast_slice(FULL_SCREEN_QUAD),
-                usage: wgpu::BufferUsage::VERTEX,
+                usage: wgpu::BufferUsages::VERTEX,
             }
         );
 
@@ -129,7 +127,7 @@ impl WGPURenderer {
                 entries: &[
                     wgpu::BindGroupLayoutEntry {
                         binding: 0,
-                        visibility: wgpu::ShaderStage::FRAGMENT,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
                         ty: wgpu::BindingType::Texture {
                             multisampled: false,
                             view_dimension: wgpu::TextureViewDimension::D2,
@@ -139,15 +137,8 @@ impl WGPURenderer {
                     },
                     wgpu::BindGroupLayoutEntry {
                         binding: 1,
-                        visibility: wgpu::ShaderStage::FRAGMENT,
-                        ty: wgpu::BindingType::Sampler {
-                            // This is only for TextureSampleType::Depth
-                            comparison: false,
-                            // This should be true if the sample_type of the texture is:
-                            //     TextureSampleType::Float { filterable: true }
-                            // Otherwise you'll get an error.
-                            filtering: false,
-                        },
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
                         count: None,
                     }
                 ],
@@ -178,7 +169,7 @@ impl WGPURenderer {
                 entries: &[
                     wgpu::BindGroupLayoutEntry {
                         binding: 0,
-                        visibility: wgpu::ShaderStage::FRAGMENT,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
                         ty: wgpu::BindingType::Texture {
                             multisampled: false,
                             view_dimension: wgpu::TextureViewDimension::D1,
@@ -188,15 +179,8 @@ impl WGPURenderer {
                     },
                     wgpu::BindGroupLayoutEntry {
                         binding: 1,
-                        visibility: wgpu::ShaderStage::FRAGMENT,
-                        ty: wgpu::BindingType::Sampler {
-                            // This is only for TextureSampleType::Depth
-                            comparison: false,
-                            // This should be true if the sample_type of the texture is:
-                            //     TextureSampleType::Float { filterable: true }
-                            // Otherwise you'll get an error.
-                            filtering: false,
-                        },
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
                         count: None,
                     }
                 ],
@@ -238,19 +222,19 @@ impl WGPURenderer {
                 layout: Some(&render_pipeline_layout),
                 vertex: wgpu::VertexState {
                     module: &shader,
-                    entry_point: "main",
+                    entry_point: "vertex_main",
                     buffers: &[
                         Vertex::desc()
                     ],
                 },
                 fragment: Some(wgpu::FragmentState {
                     module: &shader,
-                    entry_point: "main",
-                    targets: &[wgpu::ColorTargetState {
-                        format: sc_desc.format,
+                    entry_point: "fragment_main",
+                    targets: &[Some(wgpu::ColorTargetState {
+                        format: config.format,
                         blend: Some(wgpu::BlendState::REPLACE),
-                        write_mask: wgpu::ColorWrite::ALL,
-                    }],
+                        write_mask: wgpu::ColorWrites::ALL,
+                    })],
                 }),
                 primitive: wgpu::PrimitiveState {
                     topology: wgpu::PrimitiveTopology::TriangleList,
@@ -260,7 +244,7 @@ impl WGPURenderer {
                     // Setting this to anything other than Fill requires Features::NON_FILL_POLYGON_MODE
                     polygon_mode: wgpu::PolygonMode::Fill,
                     // Requires Features::DEPTH_CLAMPING
-                    clamp_depth: false,
+                    unclipped_depth: false,
                     // Requires Features::CONSERVATIVE_RASTERIZATION
                     conservative: false,
                 },
@@ -270,6 +254,7 @@ impl WGPURenderer {
                     mask: !0,
                     alpha_to_coverage_enabled: false,
                 },
+                multiview: None,
             }
         );
 
@@ -277,8 +262,7 @@ impl WGPURenderer {
             surface,
             device,
             queue,
-            sc_desc,
-            swap_chain,
+            config,
             size,
             render_pipeline,
             vertex_buffer,
@@ -300,18 +284,17 @@ impl WGPURenderer {
         }
 
         self.size = new_size;
-        self.sc_desc.width = new_size.width;
-        self.sc_desc.height = new_size.height;
-        self.swap_chain = self.device.create_swap_chain(&self.surface, &self.sc_desc);
+        self.config.width = new_size.width;
+        self.config.height = new_size.height;
+        self.surface.configure(&self.device, &self.config);
     }
 
-    pub fn render(&mut self) -> Result<(), wgpu::SwapChainError> {
+    pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         self.present();
 
-        let frame = self
-            .swap_chain
-            .get_current_frame()?
-            .output;
+        let output = self.surface.get_current_texture()?;
+        let view = output.texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
 
         let mut encoder = self.device.create_command_encoder(
             &wgpu::CommandEncoderDescriptor {
@@ -324,8 +307,8 @@ impl WGPURenderer {
                 &wgpu::RenderPassDescriptor {
                     label: Some("Render Pass"),
                     color_attachments: &[
-                        wgpu::RenderPassColorAttachment {
-                            view: &frame.view,
+                        Some(wgpu::RenderPassColorAttachment {
+                            view: &view,
                             resolve_target: None,
                             ops: wgpu::Operations {
                                 load: wgpu::LoadOp::Clear(wgpu::Color {
@@ -336,7 +319,7 @@ impl WGPURenderer {
                                 }),
                                 store: true,
                             },
-                        }
+                        })
                     ],
                     depth_stencil_attachment: None,
                 }
@@ -350,6 +333,7 @@ impl WGPURenderer {
         }
 
         self.queue.submit(std::iter::once(encoder.finish()));
+        output.present();
 
         Ok(())
     }
@@ -382,6 +366,7 @@ impl Texture {
                 texture: &self.texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
             },
             bytes,
             wgpu::ImageDataLayout {
@@ -416,7 +401,7 @@ impl Texture {
                 sample_count: 1,
                 dimension: wgpu::TextureDimension::D2,
                 format: wgpu::TextureFormat::R8Uint,
-                usage: wgpu::TextureUsage::SAMPLED | wgpu::TextureUsage::COPY_DST,
+                usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
             }
         );
 
@@ -425,6 +410,7 @@ impl Texture {
                 texture: &texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
             },
             bytes,
             wgpu::ImageDataLayout {
@@ -451,10 +437,10 @@ impl Texture {
         Ok(Self { texture, view, sampler })
     }
 
-    pub fn create_depth_texture(device: &wgpu::Device, sc_desc: &wgpu::SwapChainDescriptor, label: &str) -> Self {
-        let size = wgpu::Extent3d {
-            width: sc_desc.width,
-            height: sc_desc.height,
+    pub fn create_depth_texture(device: &wgpu::Device, config: &wgpu::SurfaceConfiguration, label: &str) -> Self {
+        let size = Extent3d {
+            width: config.width,
+            height: config.height,
             depth_or_array_layers: 1,
         };
         let desc = wgpu::TextureDescriptor {
@@ -464,7 +450,7 @@ impl Texture {
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
             format: Self::DEPTH_FORMAT,
-            usage: wgpu::TextureUsage::RENDER_ATTACHMENT | wgpu::TextureUsage::SAMPLED,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
         };
 
         let texture = device.create_texture(&desc);
@@ -526,7 +512,7 @@ impl Renderer for WGPURenderer {
     }
 
     // R_DrawColumn
-    fn draw_column(&mut self, yl: i32, yh: i32, x: i32) {
+    /*fn draw_column(&mut self, yl: i32, yh: i32, x: i32) {
         let count = yh - yl;
 
         // Zero length, column does not exceed a pixel
@@ -540,7 +526,7 @@ impl Renderer for WGPURenderer {
 
         // Framebuffer destination address
 
-    }
+    }*/
 
     fn present(&mut self) {
         self.frame_texture.update_bytes(

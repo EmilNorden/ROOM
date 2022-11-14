@@ -22,7 +22,7 @@ impl Palette {
                 sample_count: 1,
                 dimension: wgpu::TextureDimension::D1,
                 format: wgpu::TextureFormat::Rgba8Uint,
-                usage: wgpu::TextureUsage::SAMPLED | wgpu::TextureUsage::COPY_DST,
+                usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
             }
         );
 
@@ -50,6 +50,7 @@ impl Palette {
                 texture: &self.texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
             },
             &rgba_palette,
             wgpu::ImageDataLayout {
